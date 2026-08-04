@@ -257,11 +257,17 @@
     }
 
     function renderAutocomplete(query) {
-      autocompleteMatches = findMonsterMatches(query);
+      const normalizedQuery = query.trim();
+
+      autocompleteMatches =
+        normalizedQuery === ""
+          ? [...MONSTER_PRESETS]
+          : findMonsterMatches(normalizedQuery);
+
       activeAutocompleteIndex = -1;
       monsterAutocomplete.innerHTML = "";
 
-      if (query.trim() === "" || autocompleteMatches.length === 0) {
+      if (autocompleteMatches.length === 0) {
         closeAutocomplete();
         return;
       }
@@ -752,7 +758,7 @@
       const physicalColor = "#72b7ff";
       const magicColor = "#d697ff";
       const currentColor = "#ffd477";
-      const physicalLimitColor = physicalColor;
+      const physicalLimitColor = "#7ee2a8";
       const physicalLimits = getPhysicalLimits();
 
       context.clearRect(
@@ -1057,7 +1063,7 @@
       );
 
       avoidChartSummary.textContent =
-        `몬스터 명중률 ${mobAcc}, 레벨 차이 ${levelDiff}, 현재 회피율 ${userAvoid} 기준 · 회피율 범위 ${minimumAvoid}~${maximumAvoid}`;
+        `몬스터 명중률 ${mobAcc}, 레벨 차이 ${levelDiff}, 현재 회피율 ${userAvoid} 기준`;
 
       avoidChartInteractionState = {
         width,
