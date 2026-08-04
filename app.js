@@ -1,0 +1,1453 @@
+"use strict";
+
+        const ids = [
+      "userLevel",
+      "userAcc",
+      "userAvoid",
+      "mobLevel",
+      "mobAcc",
+      "mobAvoid"
+    ];
+
+    const inputs = Object.fromEntries(
+      ids.map((id) => [id, document.getElementById(id)])
+    );
+
+    const isThiefJob =
+      document.getElementById("isThiefJob");
+
+    const monsterPresetSearch =
+      document.getElementById("monsterPresetSearch");
+    const monsterAutocomplete =
+      document.getElementById("monsterAutocomplete");
+    const monsterPresetSelected =
+      document.getElementById("monsterPresetSelected");
+
+    let applyingPreset = false;
+    let selectedMonsterId = null;
+    let autocompleteMatches = [];
+    let activeAutocompleteIndex = -1;
+
+    const resultGrid = document.getElementById("resultGrid");
+    const emptyMessage = document.getElementById("emptyMessage");
+    const errorMessage = document.getElementById("errorMessage");
+
+    const physicalAvoidChange =
+      document.getElementById("physicalAvoidChange");
+    const physicalAvoidPerOne =
+      document.getElementById("physicalAvoidPerOne");
+    const physicalAvoidPerFive =
+      document.getElementById("physicalAvoidPerFive");
+    const physicalAvoidPerTen =
+      document.getElementById("physicalAvoidPerTen");
+
+    const magicAvoidChange =
+      document.getElementById("magicAvoidChange");
+    const magicAvoidPerOne =
+      document.getElementById("magicAvoidPerOne");
+    const magicAvoidPerFive =
+      document.getElementById("magicAvoidPerFive");
+    const magicAvoidPerTen =
+      document.getElementById("magicAvoidPerTen");
+
+    const avoidChartCard =
+      document.getElementById("avoidChartCard");
+    const avoidChartSummary =
+      document.getElementById("avoidChartSummary");
+    const avoidChart =
+      document.getElementById("avoidChart");
+    const avoidChartContext =
+      avoidChart.getContext("2d");
+
+    const avoidChartHoverLine =
+      document.getElementById("avoidChartHoverLine");
+
+    const avoidChartTooltip =
+      document.getElementById("avoidChartTooltip");
+
+    let avoidChartFrameId = 0;
+    let pendingAvoidChartValues = null;
+    let avoidChartInteractionState = null;
+
+    const results = {
+      requiredAcc: {
+        item: document.getElementById("requiredAccItem"),
+        value: document.getElementById("requiredAccValue"),
+        penaltyRate: document.getElementById("requiredAccPenaltyRate"),
+        penaltyTotal: document.getElementById("requiredAccPenaltyTotal")
+      },
+      hitChance: {
+        item: document.getElementById("hitChanceItem"),
+        value: document.getElementById("hitChanceValue")
+      },
+      physicalMiss: {
+        item: document.getElementById("physicalMissItem"),
+        singleWrap: document.getElementById("physicalSingleResult"),
+        singleValue: document.getElementById("physicalMissValue")
+      },
+      magicMiss: {
+        item: document.getElementById("magicMissItem"),
+        singleWrap: document.getElementById("magicSingleResult"),
+        singleValue: document.getElementById("magicMissValue")
+      }
+    };
+
+    function getPresetLabel(monster) {
+      return `Lv.${monster.level} ${monster.name}`;
+    }
+
+    const CHOSEONG = [
+      "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ",
+      "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ",
+      "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
+    ];
+
+    function normalizeSearchText(value) {
+      return value
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[·ㆍ._\-()[\]{}]/g, "");
+    }
+
+    function getChoseong(value) {
+      let result = "";
+
+      for (const character of value) {
+        const code = character.charCodeAt(0);
+
+        if (code >= 0xac00 && code <= 0xd7a3) {
+          const choseongIndex =
+            Math.floor((code - 0xac00) / 588);
+
+          result += CHOSEONG[choseongIndex];
+        } else if (CHOSEONG.includes(character)) {
+          result += character;
+        } else if (/[a-z0-9]/i.test(character)) {
+          result += character.toLowerCase();
+        }
+      }
+
+      return result;
+    }
+
+    function isSubsequence(query, target) {
+      if (query === "") {
+        return true;
+      }
+
+      let queryIndex = 0;
+
+      for (const character of target) {
+        if (character === query[queryIndex]) {
+          queryIndex += 1;
+
+          if (queryIndex === query.length) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
+
+    function getMonsterMatchScore(monster, query) {
+      const normalizedQuery = normalizeSearchText(query);
+
+      if (normalizedQuery === "") {
+        return null;
+      }
+
+      const normalizedName =
+        normalizeSearchText(monster.name);
+      const nameChoseong =
+        getChoseong(normalizedName);
+      const queryChoseong =
+        getChoseong(normalizedQuery);
+
+      if (normalizedName === normalizedQuery) {
+        return 0;
+      }
+
+      if (normalizedName.startsWith(normalizedQuery)) {
+        return 1;
+      }
+
+      if (normalizedName.includes(normalizedQuery)) {
+        return 2;
+      }
+
+      if (
+        queryChoseong !== "" &&
+        nameChoseong.startsWith(queryChoseong)
+      ) {
+        return 3;
+      }
+
+      if (
+        queryChoseong !== "" &&
+        nameChoseong.includes(queryChoseong)
+      ) {
+        return 4;
+      }
+
+      if (isSubsequence(normalizedQuery, normalizedName)) {
+        return 5;
+      }
+
+      if (
+        queryChoseong !== "" &&
+        isSubsequence(queryChoseong, nameChoseong)
+      ) {
+        return 6;
+      }
+
+      if (
+        String(monster.id).includes(normalizedQuery) ||
+        String(monster.level).includes(normalizedQuery)
+      ) {
+        return 7;
+      }
+
+      return null;
+    }
+
+    function findMonsterMatches(query) {
+      return MONSTER_PRESETS
+        .map((monster) => ({
+          monster,
+          score: getMonsterMatchScore(monster, query)
+        }))
+        .filter((item) => item.score !== null)
+        .sort((a, b) => {
+          return (
+            a.score - b.score ||
+            a.monster.level - b.monster.level ||
+            a.monster.name.localeCompare(b.monster.name, "ko")
+          );
+        })
+        .slice(0, 30)
+        .map((item) => item.monster);
+    }
+
+    function closeAutocomplete() {
+      monsterAutocomplete.classList.add("hidden");
+      monsterPresetSearch.setAttribute("aria-expanded", "false");
+      activeAutocompleteIndex = -1;
+    }
+
+    function updateActiveAutocompleteItem() {
+      const items =
+        monsterAutocomplete.querySelectorAll(".autocomplete-item");
+
+      items.forEach((item, index) => {
+        item.classList.toggle(
+          "active",
+          index === activeAutocompleteIndex
+        );
+      });
+
+      if (
+        activeAutocompleteIndex >= 0 &&
+        items[activeAutocompleteIndex]
+      ) {
+        items[activeAutocompleteIndex].scrollIntoView({
+          block: "nearest"
+        });
+      }
+    }
+
+    function renderAutocomplete(query) {
+      autocompleteMatches = findMonsterMatches(query);
+      activeAutocompleteIndex = -1;
+      monsterAutocomplete.innerHTML = "";
+
+      if (query.trim() === "" || autocompleteMatches.length === 0) {
+        closeAutocomplete();
+        return;
+      }
+
+      autocompleteMatches.forEach((monster, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "autocomplete-item";
+        button.setAttribute("role", "option");
+        button.dataset.index = String(index);
+
+        const name = document.createElement("span");
+        name.className = "autocomplete-name";
+        name.textContent = monster.name;
+
+        const level = document.createElement("span");
+        level.className = "autocomplete-level";
+        level.textContent = `Lv.${monster.level}`;
+
+        button.append(name, level);
+
+        button.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          selectMonsterPreset(monster);
+        });
+
+        monsterAutocomplete.appendChild(button);
+      });
+
+      monsterAutocomplete.classList.remove("hidden");
+      monsterPresetSearch.setAttribute("aria-expanded", "true");
+    }
+
+    function selectMonsterPreset(monster) {
+      applyingPreset = true;
+      selectedMonsterId = monster.id;
+
+      monsterPresetSearch.value = monster.name;
+      inputs.mobLevel.value = String(monster.level);
+      inputs.mobAcc.value = String(monster.acc);
+      inputs.mobAvoid.value = String(monster.avoid);
+
+      monsterPresetSelected.textContent =
+        `${getPresetLabel(monster)} 선택됨`;
+      monsterPresetSelected.classList.remove("hidden");
+
+      applyingPreset = false;
+      closeAutocomplete();
+      calculate();
+    }
+
+    function markPresetAsCustom() {
+      if (!applyingPreset && selectedMonsterId !== null) {
+        selectedMonsterId = null;
+        monsterPresetSelected.textContent = "";
+        monsterPresetSelected.classList.add("hidden");
+      }
+    }
+
+    function sanitizeAndClampInput(input) {
+      const digitsOnly = input.value.replace(/\D/g, "");
+
+      if (digitsOnly === "") {
+        input.value = "";
+        return;
+      }
+
+      const min = Number(input.dataset.min);
+      const max = Number(input.dataset.max);
+      let value = Number(digitsOnly);
+
+      if (value < min) {
+        value = min;
+      } else if (value > max) {
+        value = max;
+      }
+
+      input.value = String(value);
+    }
+
+    function readNumber(input) {
+      const raw = input.value.trim();
+
+      if (raw === "") {
+        return null;
+      }
+
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function clampProbability(value) {
+      if (!Number.isFinite(value)) {
+        return null;
+      }
+
+      return clamp(value, 0, 1);
+    }
+
+    function getPhysicalLimits() {
+      return isThiefJob.checked
+        ? { min: 0.05, max: 0.95 }
+        : { min: 0.02, max: 0.80 };
+    }
+
+    function clampPhysicalProbability(value) {
+      if (!Number.isFinite(value)) {
+        return null;
+      }
+
+      const limits = getPhysicalLimits();
+      return clamp(value, limits.min, limits.max);
+    }
+
+    function formatPercent(value) {
+      return `${(value * 100).toFixed(2)}%`;
+    }
+
+    function formatPercentagePoint(value) {
+      const percentagePoint =
+        Math.round(value * 100000) / 1000;
+
+      const sign =
+        percentagePoint > 0 ? "+" : "";
+
+      const compactValue =
+        Number(
+          percentagePoint.toFixed(3)
+        );
+
+      return `${sign}${compactValue}%p`;
+    }
+
+    function getPhysicalMissProbability(
+      userAvoid,
+      levelDiff,
+      mobAcc
+    ) {
+      const effectiveAvoid =
+        userAvoid - levelDiff / 2;
+
+      return effectiveAvoid /
+        (4.5 * mobAcc);
+    }
+
+    function getMagicMissProbability(
+      userAvoid,
+      levelDiff,
+      mobAcc
+    ) {
+      const effectiveAvoid =
+        userAvoid - levelDiff / 2;
+
+      if (effectiveAvoid <= 0) {
+        return 0;
+      }
+
+      return (
+        10 / 9 -
+        mobAcc / (0.9 * effectiveAvoid)
+      );
+    }
+
+    function showAvoidChangeDetails(
+      userAvoid,
+      levelDiff,
+      mobAcc
+    ) {
+      const currentPhysical =
+        clampPhysicalProbability(
+          getPhysicalMissProbability(
+            userAvoid, levelDiff, mobAcc
+          )
+        );
+
+      const physicalPlusOne =
+        clampPhysicalProbability(
+          getPhysicalMissProbability(
+            userAvoid + 1, levelDiff, mobAcc
+          )
+        );
+
+      const physicalPlusFive =
+        clampPhysicalProbability(
+          getPhysicalMissProbability(
+            userAvoid + 5, levelDiff, mobAcc
+          )
+        );
+
+      const physicalPlusTen =
+        clampPhysicalProbability(
+          getPhysicalMissProbability(
+            userAvoid + 10, levelDiff, mobAcc
+          )
+        );
+
+      physicalAvoidPerOne.innerHTML =
+        `회피율 1 증가 시 <strong>${formatPercentagePoint(physicalPlusOne - currentPhysical)}</strong>`;
+      physicalAvoidPerFive.innerHTML =
+        `회피율 5 증가 시 <strong>${formatPercentagePoint(physicalPlusFive - currentPhysical)}</strong>`;
+      physicalAvoidPerTen.innerHTML =
+        `회피율 10 증가 시 <strong>${formatPercentagePoint(physicalPlusTen - currentPhysical)}</strong>`;
+      physicalAvoidChange.classList.remove("hidden");
+
+      const currentMagic = clampProbability(
+        getMagicMissProbability(userAvoid, levelDiff, mobAcc)
+      );
+      const magicPlusOne = clampProbability(
+        getMagicMissProbability(userAvoid + 1, levelDiff, mobAcc)
+      );
+      const magicPlusFive = clampProbability(
+        getMagicMissProbability(userAvoid + 5, levelDiff, mobAcc)
+      );
+      const magicPlusTen = clampProbability(
+        getMagicMissProbability(userAvoid + 10, levelDiff, mobAcc)
+      );
+
+      magicAvoidPerOne.innerHTML =
+        `회피율 1 증가 시 <strong>${formatPercentagePoint(magicPlusOne - currentMagic)}</strong>`;
+      magicAvoidPerFive.innerHTML =
+        `회피율 5 증가 시 <strong>${formatPercentagePoint(magicPlusFive - currentMagic)}</strong>`;
+      magicAvoidPerTen.innerHTML =
+        `회피율 10 증가 시 <strong>${formatPercentagePoint(magicPlusTen - currentMagic)}</strong>`;
+      magicAvoidChange.classList.remove("hidden");
+    }
+
+    function prepareCanvas(canvas, context) {
+      const ratio =
+        Math.min(window.devicePixelRatio || 1, 2);
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const width =
+        Math.max(1, Math.round(rect.width));
+      const height =
+        Math.max(1, Math.round(rect.height));
+
+      canvas.width =
+        Math.round(width * ratio);
+      canvas.height =
+        Math.round(height * ratio);
+
+      context.setTransform(
+        ratio,
+        0,
+        0,
+        ratio,
+        0,
+        0
+      );
+
+      return {
+        width,
+        height
+      };
+    }
+
+    function scheduleAvoidChart(
+      userAvoid,
+      levelDiff,
+      mobAcc
+    ) {
+      pendingAvoidChartValues = {
+        userAvoid,
+        levelDiff,
+        mobAcc
+      };
+
+      /*
+       * display:none 상태에서는 canvas 크기가 0으로 측정됩니다.
+       * 먼저 카드를 표시하고 다음 화면 프레임에서 그립니다.
+       */
+      avoidChartCard.classList.remove("hidden");
+
+      if (avoidChartFrameId) {
+        window.cancelAnimationFrame(
+          avoidChartFrameId
+        );
+      }
+
+      avoidChartFrameId =
+        window.requestAnimationFrame(() => {
+          avoidChartFrameId = 0;
+
+          if (!pendingAvoidChartValues) {
+            return;
+          }
+
+          const values =
+            pendingAvoidChartValues;
+
+          pendingAvoidChartValues = null;
+
+          drawAvoidChart(
+            values.userAvoid,
+            values.levelDiff,
+            values.mobAcc
+          );
+        });
+    }
+
+    function hideAvoidChartTooltip() {
+      avoidChartHoverLine.classList.add("hidden");
+      avoidChartTooltip.classList.add("hidden");
+    }
+
+    function formatHoverPercentage(probability) {
+      if (!Number.isFinite(probability)) {
+        return "-";
+      }
+
+      return `${(
+        clampProbability(probability) * 100
+      ).toFixed(2)}%`;
+    }
+
+    function updateAvoidChartTooltip(event) {
+      const state =
+        avoidChartInteractionState;
+
+      if (!state) {
+        hideAvoidChartTooltip();
+        return;
+      }
+
+      const rect =
+        avoidChart.getBoundingClientRect();
+
+      const pointerX =
+        event.clientX - rect.left;
+
+      const plotLeft =
+        state.padding.left;
+
+      const plotRight =
+        state.width - state.padding.right;
+
+      if (
+        pointerX < plotLeft ||
+        pointerX > plotRight
+      ) {
+        hideAvoidChartTooltip();
+        return;
+      }
+
+      const ratio =
+        (pointerX - plotLeft) /
+        state.plotWidth;
+
+      const roundedAvoid =
+        Math.max(
+          state.minimumAvoid,
+          Math.min(
+            state.maximumAvoid,
+            Math.round(
+              state.minimumAvoid +
+              ratio *
+                (
+                  state.maximumAvoid -
+                  state.minimumAvoid
+                )
+            )
+          )
+        );
+
+      const lineX =
+        state.toX(roundedAvoid);
+
+      const physical =
+        clampPhysicalProbability(
+          getPhysicalMissProbability(
+            roundedAvoid,
+            state.levelDiff,
+            state.mobAcc
+          )
+        );
+
+      const magic =
+        getMagicMissProbability(
+          roundedAvoid,
+          state.levelDiff,
+          state.mobAcc
+        );
+
+      const canvasOffsetLeft =
+        avoidChart.offsetLeft;
+
+      const canvasOffsetTop =
+        avoidChart.offsetTop;
+
+      avoidChartHoverLine.style.left =
+        `${canvasOffsetLeft + lineX}px`;
+
+      avoidChartHoverLine.classList.remove(
+        "hidden"
+      );
+
+      avoidChartTooltip.innerHTML =
+        `<div class="chart-tooltip-title">회피율 ${roundedAvoid}</div>` +
+        `<div class="chart-tooltip-row">` +
+          `<span class="chart-tooltip-label">물리공격 회피</span>` +
+          `<strong class="chart-tooltip-physical">${formatHoverPercentage(physical)}</strong>` +
+        `</div>` +
+        `<div class="chart-tooltip-row">` +
+          `<span class="chart-tooltip-label">마법공격 회피</span>` +
+          `<strong class="chart-tooltip-magic">${formatHoverPercentage(magic)}</strong>` +
+        `</div>`;
+
+      avoidChartTooltip.classList.remove(
+        "hidden"
+      );
+
+      const tooltipWidth =
+        avoidChartTooltip.offsetWidth;
+
+      const tooltipHeight =
+        avoidChartTooltip.offsetHeight;
+
+      let tooltipX =
+        lineX + 13;
+
+      if (
+        tooltipX + tooltipWidth >
+        rect.width - 8
+      ) {
+        tooltipX =
+          lineX - tooltipWidth - 13;
+      }
+
+      const pointerY =
+        event.clientY - rect.top;
+
+      const tooltipY =
+        Math.max(
+          8,
+          Math.min(
+            rect.height - tooltipHeight - 8,
+            pointerY - tooltipHeight / 2
+          )
+        );
+
+      avoidChartTooltip.style.left =
+        `${canvasOffsetLeft + tooltipX}px`;
+
+      avoidChartTooltip.style.top =
+        `${canvasOffsetTop + tooltipY}px`;
+    }
+
+    function drawAvoidChart(
+      userAvoid,
+      levelDiff,
+      mobAcc
+    ) {
+      const { width, height } =
+        prepareCanvas(
+          avoidChart,
+          avoidChartContext
+        );
+
+      const context =
+        avoidChartContext;
+
+      if (width <= 1 || height <= 1) {
+        scheduleAvoidChart(
+          userAvoid,
+          levelDiff,
+          mobAcc
+        );
+        return;
+      }
+
+      const styles =
+        getComputedStyle(document.documentElement);
+
+      const gridColor =
+        styles.getPropertyValue("--line").trim() ||
+        "#343b49";
+
+      const textColor =
+        styles.getPropertyValue("--muted").trim() ||
+        "#9198a7";
+
+      const physicalColor = "#72b7ff";
+      const magicColor = "#d697ff";
+      const currentColor = "#ffd477";
+      const physicalLimitColor = "#7ee2a8";
+      const physicalLimits = getPhysicalLimits();
+
+      context.clearRect(
+        0,
+        0,
+        width,
+        height
+      );
+
+      const padding = {
+        left: 54,
+        right: 20,
+        top: 20,
+        bottom: 42
+      };
+
+      const plotWidth =
+        width - padding.left - padding.right;
+      const plotHeight =
+        height - padding.top - padding.bottom;
+
+      const minimumAvoid =
+        Math.max(
+          1,
+          Math.floor(userAvoid - 100)
+        );
+
+      const maximumAvoid =
+        Math.min(
+          1000,
+          Math.max(
+            minimumAvoid + 20,
+            Math.ceil(userAvoid + 100)
+          )
+        );
+
+      const toX = (avoid) =>
+        padding.left +
+        (
+          (avoid - minimumAvoid) /
+          (maximumAvoid - minimumAvoid)
+        ) * plotWidth;
+
+      const toY = (probability) =>
+        padding.top +
+        (
+          1 -
+          clampProbability(probability)
+        ) * plotHeight;
+
+      context.font =
+        "12px system-ui, sans-serif";
+      context.textAlign = "right";
+      context.textBaseline = "middle";
+
+      for (let index = 0; index <= 5; index += 1) {
+        const probability =
+          index / 5;
+
+        const y =
+          padding.top +
+          (1 - probability) * plotHeight;
+
+        context.strokeStyle =
+          gridColor;
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(
+          padding.left,
+          y
+        );
+        context.lineTo(
+          width - padding.right,
+          y
+        );
+        context.stroke();
+
+        context.fillStyle =
+          textColor;
+        context.fillText(
+          `${Math.round(probability * 100)}%`,
+          padding.left - 9,
+          y
+        );
+      }
+
+      context.textAlign = "center";
+      context.textBaseline = "top";
+
+      const xTickCount =
+        width < 560 ? 4 : 5;
+
+      for (
+        let index = 0;
+        index <= xTickCount;
+        index += 1
+      ) {
+        const ratio =
+          index / xTickCount;
+
+        const avoid =
+          Math.round(
+            minimumAvoid +
+            ratio *
+              (maximumAvoid - minimumAvoid)
+          );
+
+        const x = toX(avoid);
+
+        context.strokeStyle =
+          gridColor;
+        context.beginPath();
+        context.moveTo(
+          x,
+          padding.top
+        );
+        context.lineTo(
+          x,
+          height - padding.bottom
+        );
+        context.stroke();
+
+        context.fillStyle =
+          textColor;
+        context.fillText(
+          String(avoid),
+          x,
+          height - padding.bottom + 10
+        );
+      }
+
+      function drawLimitLine(
+        probability,
+        color,
+        dash
+      ) {
+        const y =
+          toY(probability);
+
+        context.save();
+        context.strokeStyle = color;
+        context.lineWidth = 1.25;
+        context.setLineDash(dash);
+        context.beginPath();
+        context.moveTo(
+          padding.left,
+          y
+        );
+        context.lineTo(
+          width - padding.right,
+          y
+        );
+        context.stroke();
+        context.restore();
+      }
+
+      drawLimitLine(
+        physicalLimits.max,
+        physicalLimitColor,
+        [8, 5]
+      );
+
+      drawLimitLine(
+        physicalLimits.min,
+        physicalLimitColor,
+        [8, 5]
+      );
+
+      function drawLine(
+        probabilityFunction,
+        color
+      ) {
+        context.strokeStyle = color;
+        context.lineWidth = 2.5;
+        context.lineJoin = "round";
+        context.lineCap = "round";
+        context.beginPath();
+
+        let started = false;
+
+        for (
+          let pixel = 0;
+          pixel <= plotWidth;
+          pixel += 3
+        ) {
+          const avoid =
+            minimumAvoid +
+            (
+              pixel / plotWidth
+            ) *
+              (
+                maximumAvoid -
+                minimumAvoid
+              );
+
+          const probability =
+            probabilityFunction(avoid);
+
+          const x =
+            padding.left + pixel;
+          const y =
+            toY(probability);
+
+          if (!started) {
+            context.moveTo(x, y);
+            started = true;
+          } else {
+            context.lineTo(x, y);
+          }
+        }
+
+        context.stroke();
+      }
+
+      drawLine(
+        (avoid) =>
+          clampPhysicalProbability(
+            getPhysicalMissProbability(
+              avoid,
+              levelDiff,
+              mobAcc
+            )
+          ),
+        physicalColor
+      );
+
+      drawLine(
+        (avoid) =>
+          getMagicMissProbability(
+            avoid,
+            levelDiff,
+            mobAcc
+          ),
+        magicColor
+      );
+
+      const currentX =
+        toX(userAvoid);
+
+      context.strokeStyle =
+        currentColor;
+      context.lineWidth = 1.5;
+      context.setLineDash([5, 5]);
+      context.beginPath();
+      context.moveTo(
+        currentX,
+        padding.top
+      );
+      context.lineTo(
+        currentX,
+        height - padding.bottom
+      );
+      context.stroke();
+      context.setLineDash([]);
+
+      const currentPhysical =
+        clampPhysicalProbability(
+          getPhysicalMissProbability(
+            userAvoid,
+            levelDiff,
+            mobAcc
+          )
+        );
+
+      const currentMagic =
+        clampProbability(
+          getMagicMissProbability(
+            userAvoid,
+            levelDiff,
+            mobAcc
+          )
+        );
+
+      for (
+        const [probability, color] of
+        [
+          [currentPhysical, physicalColor],
+          [currentMagic, magicColor]
+        ]
+      ) {
+        context.fillStyle = color;
+        context.beginPath();
+        context.arc(
+          currentX,
+          toY(probability),
+          4.5,
+          0,
+          Math.PI * 2
+        );
+        context.fill();
+      }
+
+      context.fillStyle =
+        textColor;
+      context.textAlign = "center";
+      context.textBaseline = "bottom";
+      context.fillText(
+        "나의 회피율",
+        padding.left +
+          plotWidth / 2,
+        height - 4
+      );
+
+      avoidChartSummary.textContent =
+        `몬스터 명중률 ${mobAcc}, 레벨 차이 ${levelDiff}, 현재 회피율 ${userAvoid} 기준 · 회피율 범위 ${minimumAvoid}~${maximumAvoid}`;
+
+      avoidChartInteractionState = {
+        width,
+        height,
+        padding,
+        plotWidth,
+        plotHeight,
+        minimumAvoid,
+        maximumAvoid,
+        levelDiff,
+        mobAcc,
+        toX,
+        toY
+      };
+
+    }
+
+    function hideResults() {
+      results.requiredAcc.item.classList.add("hidden");
+      results.requiredAcc.penaltyRate.classList.add("hidden");
+      results.requiredAcc.penaltyRate.textContent = "";
+      results.requiredAcc.penaltyTotal.classList.add("hidden");
+      results.requiredAcc.penaltyTotal.textContent = "";
+      results.hitChance.item.classList.add("hidden");
+      results.physicalMiss.item.classList.add("hidden");
+      results.magicMiss.item.classList.add("hidden");
+
+      physicalAvoidChange.classList.add("hidden");
+      magicAvoidChange.classList.add("hidden");
+
+      pendingAvoidChartValues = null;
+      avoidChartInteractionState = null;
+      hideAvoidChartTooltip();
+
+      if (avoidChartFrameId) {
+        window.cancelAnimationFrame(
+          avoidChartFrameId
+        );
+        avoidChartFrameId = 0;
+      }
+
+      avoidChartCard.classList.add("hidden");
+    }
+
+    function showSimpleResult(key, text, probability = null) {
+      const target = results[key];
+
+      target.item.classList.remove("hidden");
+      target.value.textContent = text;
+      target.value.classList.remove("good", "warn");
+
+      if (probability !== null) {
+        if (probability >= 1) {
+          target.value.classList.add("good");
+        } else if (probability <= 0.1) {
+          target.value.classList.add("warn");
+        }
+      }
+    }
+
+    function showPhysicalAvoidResult(rawProbability) {
+      const target = results.physicalMiss;
+      const probability =
+        clampPhysicalProbability(rawProbability);
+
+      target.item.classList.remove("hidden");
+      target.singleWrap.classList.remove("hidden");
+      target.singleValue.textContent =
+        formatPercent(probability);
+      target.singleValue.classList.remove("good", "warn");
+
+      if (probability <= 0.1) {
+        target.singleValue.classList.add("warn");
+      }
+    }
+
+    function showMagicAvoidResult(rawProbability) {
+      const target = results.magicMiss;
+
+      /*
+       * 마법 회피에는 도적/타직업 상·하한를 적용하지 않습니다.
+       * 확률 UI의 표시 범위만 0%~100%로 정규화합니다.
+       */
+      const normalized =
+        clampProbability(rawProbability);
+
+      target.item.classList.remove("hidden");
+      target.singleWrap.classList.remove("hidden");
+
+      target.singleValue.textContent =
+        formatPercent(normalized);
+
+      target.singleValue.classList.remove(
+        "good",
+        "warn"
+      );
+
+      if (normalized <= 0.1) {
+        target.singleValue.classList.add("warn");
+      }
+    }
+
+    function calculate() {
+      hideResults();
+      errorMessage.classList.add("hidden");
+      errorMessage.textContent = "";
+
+      const userLevel = readNumber(inputs.userLevel);
+      const userAcc = readNumber(inputs.userAcc);
+      const userAvoid = readNumber(inputs.userAvoid);
+      const mobLevel = readNumber(inputs.mobLevel);
+      const mobAcc = readNumber(inputs.mobAcc);
+      const mobAvoid = readNumber(inputs.mobAvoid);
+
+      let visibleCount = 0;
+      let levelDiff = null;
+
+      if (userLevel !== null && mobLevel !== null) {
+        levelDiff = Math.max(mobLevel - userLevel, 0);
+      }
+
+      /*
+       * 유저 레벨이 비어 있고 몬스터 회피율만 입력된 경우에는
+       * 동레벨(levelDiff = 0) 기준 필요 명중률을 보여줍니다.
+       */
+      if (mobAvoid !== null) {
+        const requiredLevelDiff = levelDiff ?? 0;
+        const requiredAcc =
+          ((51 + 2 * requiredLevelDiff) * mobAvoid) / 14;
+
+        const requiredAccRounded = Math.ceil(requiredAcc);
+
+        showSimpleResult(
+          "requiredAcc",
+          requiredAccRounded.toString(),
+          1
+        );
+
+        if (levelDiff !== null && levelDiff > 0) {
+          const baseRequiredAcc =
+            (51 * mobAvoid) / 14;
+
+          const baseRequiredAccRounded =
+            Math.ceil(baseRequiredAcc);
+
+          const additionalRequiredAcc =
+            requiredAccRounded - baseRequiredAccRounded;
+
+          const penaltyPerLevel =
+            (2 * mobAvoid) / 14;
+
+          results.requiredAcc.penaltyRate.textContent =
+            `레벨 차이 명중률 패널티 적용 (1레벨 차이 ≈ ${penaltyPerLevel.toFixed(1)} 명중률)`;
+
+          results.requiredAcc.penaltyTotal.textContent =
+            `필요 명중률 ${baseRequiredAccRounded} + 패널티 ${additionalRequiredAcc}`;
+
+          results.requiredAcc.penaltyRate.classList.remove("hidden");
+          results.requiredAcc.penaltyTotal.classList.remove("hidden");
+        }
+
+        visibleCount += 1;
+      }
+
+      if (
+        levelDiff !== null &&
+        userAcc !== null &&
+        mobAvoid !== null
+      ) {
+        const rawHitChance =
+          (28 * userAcc) /
+            ((51 + 2 * levelDiff) * mobAvoid) -
+          1;
+
+        const hitChance = clampProbability(rawHitChance);
+
+        showSimpleResult(
+          "hitChance",
+          formatPercent(hitChance),
+          hitChance
+        );
+
+        visibleCount += 1;
+      }
+
+      if (
+        levelDiff !== null &&
+        userAvoid !== null &&
+        mobAcc !== null
+      ) {
+        const rawPhysicalMiss =
+          getPhysicalMissProbability(
+            userAvoid,
+            levelDiff,
+            mobAcc
+          );
+
+        showPhysicalAvoidResult(
+          rawPhysicalMiss
+        );
+
+        const rawMagicMiss =
+          getMagicMissProbability(
+            userAvoid,
+            levelDiff,
+            mobAcc
+          );
+
+        showMagicAvoidResult(
+          rawMagicMiss
+        );
+
+        showAvoidChangeDetails(
+          userAvoid,
+          levelDiff,
+          mobAcc
+        );
+
+        scheduleAvoidChart(
+          userAvoid,
+          levelDiff,
+          mobAcc
+        );
+
+        visibleCount += 2;
+      }
+
+      if (visibleCount > 0) {
+        resultGrid.classList.remove("hidden");
+        emptyMessage.classList.add("hidden");
+      } else {
+        resultGrid.classList.add("hidden");
+        emptyMessage.classList.remove("hidden");
+      }
+    }
+
+    ids.forEach((id) => {
+      inputs[id].addEventListener("input", (event) => {
+        sanitizeAndClampInput(event.currentTarget);
+
+        if (["mobLevel", "mobAcc", "mobAvoid"].includes(id)) {
+          markPresetAsCustom();
+        }
+
+        calculate();
+      });
+
+      inputs[id].addEventListener("blur", (event) => {
+        sanitizeAndClampInput(event.currentTarget);
+
+        if (["mobLevel", "mobAcc", "mobAvoid"].includes(id)) {
+          markPresetAsCustom();
+        }
+
+        calculate();
+      });
+    });
+
+    isThiefJob.addEventListener("change", calculate);
+
+    monsterPresetSearch.addEventListener("input", () => {
+      markPresetAsCustom();
+      renderAutocomplete(monsterPresetSearch.value);
+    });
+
+    monsterPresetSearch.addEventListener("focus", () => {
+      renderAutocomplete(monsterPresetSearch.value);
+    });
+
+    monsterPresetSearch.addEventListener("keydown", (event) => {
+      if (monsterAutocomplete.classList.contains("hidden")) {
+        if (event.key === "ArrowDown") {
+          renderAutocomplete(monsterPresetSearch.value);
+        }
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+
+        activeAutocompleteIndex =
+          Math.min(
+            activeAutocompleteIndex + 1,
+            autocompleteMatches.length - 1
+          );
+
+        updateActiveAutocompleteItem();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+
+        activeAutocompleteIndex =
+          Math.max(activeAutocompleteIndex - 1, 0);
+
+        updateActiveAutocompleteItem();
+      } else if (event.key === "Enter") {
+        if (
+          activeAutocompleteIndex >= 0 &&
+          autocompleteMatches[activeAutocompleteIndex]
+        ) {
+          event.preventDefault();
+          selectMonsterPreset(
+            autocompleteMatches[activeAutocompleteIndex]
+          );
+        }
+      } else if (event.key === "Escape") {
+        closeAutocomplete();
+      }
+    });
+
+    monsterPresetSearch.addEventListener("blur", () => {
+      window.setTimeout(closeAutocomplete, 120);
+    });
+
+    document
+      .getElementById("resetButton")
+      .addEventListener("click", () => {
+        ids.forEach((id) => {
+          inputs[id].value = "";
+        });
+
+        monsterPresetSearch.value = "";
+        isThiefJob.checked = false;
+        selectedMonsterId = null;
+        monsterPresetSelected.textContent = "";
+        monsterPresetSelected.classList.add("hidden");
+        closeAutocomplete();
+
+        calculate();
+        inputs.userLevel.focus();
+      });
+
+    avoidChart.addEventListener(
+      "mousemove",
+      updateAvoidChartTooltip
+    );
+
+    avoidChart.addEventListener(
+      "mouseleave",
+      hideAvoidChartTooltip
+    );
+
+    avoidChart.addEventListener(
+      "pointermove",
+      (event) => {
+        if (event.pointerType !== "mouse") {
+          updateAvoidChartTooltip(event);
+        }
+      }
+    );
+
+    avoidChart.addEventListener(
+      "pointerleave",
+      hideAvoidChartTooltip
+    );
+
+    let resizeTimer = null;
+
+    window.addEventListener("resize", () => {
+      hideAvoidChartTooltip();
+      window.clearTimeout(resizeTimer);
+
+      resizeTimer = window.setTimeout(() => {
+        const userLevel =
+          readNumber(inputs.userLevel);
+        const userAvoid =
+          readNumber(inputs.userAvoid);
+        const mobLevel =
+          readNumber(inputs.mobLevel);
+        const mobAcc =
+          readNumber(inputs.mobAcc);
+
+        if (
+          userLevel !== null &&
+          userAvoid !== null &&
+          mobLevel !== null &&
+          mobAcc !== null
+        ) {
+          const levelDiff =
+            Math.max(
+              mobLevel - userLevel,
+              0
+            );
+
+          scheduleAvoidChart(
+            userAvoid,
+            levelDiff,
+            mobAcc
+          );
+        }
+      }, 120);
+    });
+
+    calculate();

@@ -1,0 +1,453 @@
+:root {
+      --bg: #111318;
+      --panel: #1a1e26;
+      --panel-2: #222733;
+      --line: #343b49;
+      --text: #f4f6f8;
+      --muted: #aab2bf;
+      --accent: #7ab8ff;
+      --good: #7ee2a8;
+      --warn: #ffd479;
+      --danger: #ff8f8f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(122, 184, 255, 0.10), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      font-family:
+        Pretendard,
+        "Noto Sans KR",
+        "Apple SD Gothic Neo",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    input,
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 44px 0 64px;
+    }
+
+    .hero {
+      margin-bottom: 26px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      letter-spacing: -0.05em;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(26, 30, 38, 0.96);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
+    }
+
+    .card h2 {
+      margin: 0 0 18px;
+      font-size: 1.2rem;
+    }
+
+    .fields {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .checkbox-field {
+      margin-top: 2px;
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      color: var(--text) !important;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-label input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      outline: none;
+      background: var(--panel-2);
+      color: var(--text);
+    }
+
+    .preset-field {
+      position: relative;
+    }
+
+    .preset-search {
+      margin-top: 8px;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      max-height: 320px;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #181c24;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+    }
+
+    .autocomplete-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 11px 13px;
+      border: 0;
+      border-bottom: 1px solid rgba(52, 59, 73, 0.72);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: 0;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.active {
+      background: rgba(122, 184, 255, 0.12);
+    }
+
+    .autocomplete-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .autocomplete-level {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 400;
+    }
+
+    .preset-selected {
+      margin-top: 7px;
+      color: var(--accent);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(122, 184, 255, 0.14);
+    }
+
+    .field input::placeholder {
+      color: #707887;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
+    .actions button {
+      padding: 10px 15px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel-2);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .results {
+      margin-top: 18px;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .result-item {
+      min-height: 112px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel-2);
+    }
+
+    .result-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .result-value {
+      margin-top: 16px;
+      font-size: clamp(1.45rem, 4vw, 2.1rem);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+    }
+
+    .result-sub {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    #physicalMissItem > .result-sub {
+      color: #9ed0ff;
+    }
+
+    #magicMissItem > .result-sub {
+      color: #ddb0ff;
+    }
+
+    .avoid-change {
+      display: grid;
+      gap: 3px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(52, 59, 73, 0.72);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    .avoid-change strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .chart-card {
+      margin-top: 18px;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .chart-header h2 {
+      margin: 0;
+    }
+
+    .chart-summary {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .legend-line {
+      width: 22px;
+      height: 3px;
+      border-radius: 99px;
+      background: currentColor;
+    }
+
+    .legend-physical {
+      color: #72b7ff;
+    }
+
+    .legend-magic {
+      color: #d697ff;
+    }
+
+    .legend-current {
+      color: #ffd477;
+    }
+
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 360px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel-2);
+      overflow: hidden;
+    }
+
+    #avoidChart {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    .chart-hover-line {
+      position: absolute;
+      z-index: 2;
+      top: 20px;
+      bottom: 42px;
+      width: 1px;
+      border-left: 1px dashed rgba(244, 246, 248, 0.58);
+      pointer-events: none;
+      transform: translateX(-0.5px);
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      z-index: 3;
+      min-width: 174px;
+      padding: 10px 12px;
+      border: 1px solid rgba(122, 184, 255, 0.42);
+      border-radius: 10px;
+      background: rgba(17, 19, 24, 0.96);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+      color: var(--text);
+      font-size: 0.78rem;
+      line-height: 1.55;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .chart-tooltip-title {
+      margin-bottom: 5px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .chart-tooltip-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .chart-tooltip-label {
+      color: var(--muted);
+    }
+
+    .chart-tooltip-physical {
+      color: #72b7ff;
+    }
+
+    .chart-tooltip-magic {
+      color: #d697ff;
+    }
+
+    @media (max-width: 720px) {
+      .chart-wrap {
+        height: 300px;
+      }
+
+      .chart-header {
+        display: block;
+      }
+    }
+
+    .good {
+      color: var(--good);
+    }
+
+    .warn {
+      color: var(--warn);
+    }
+
+    .empty {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .error {
+      margin-top: 14px;
+      color: var(--danger);
+      line-height: 1.6;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100% - 20px, 1040px);
+        padding-top: 28px;
+      }
+
+      .input-grid,
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 15px;
+      }
+    }

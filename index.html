@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>명중회피 계산기</title>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main class="page">
+    <header class="hero">
+      <h1>명중회피 계산기</h1>
+    </header>
+
+    <section class="input-grid">
+      <article class="card">
+        <h2>나의 정보</h2>
+
+        <div class="fields">
+          <div class="field">
+            <label for="userLevel">나의 레벨</label>
+            <input
+              id="userLevel"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="ex) 180"
+              data-min="1"
+              data-max="200"
+            />
+          </div>
+
+          <div class="field">
+            <label for="userAcc">나의 명중률</label>
+            <input
+              id="userAcc"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="ex) 180"
+              data-min="1"
+              data-max="1000"
+            />
+          </div>
+
+          <div class="field">
+            <label for="userAvoid">나의 회피율</label>
+            <input
+              id="userAvoid"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="ex) 100"
+              data-min="1"
+              data-max="1000"
+            />
+          </div>
+
+          <div class="field checkbox-field">
+            <label class="checkbox-label" for="isThiefJob">
+              <input id="isThiefJob" type="checkbox" />
+              <span>도적 직업군</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>몬스터 정보</h2>
+
+        <div class="fields">
+          <div class="field preset-field">
+            <label for="monsterPresetSearch">몬스터 프리셋 검색</label>
+            <input
+              id="monsterPresetSearch"
+              class="preset-search"
+              type="text"
+              autocomplete="off"
+              placeholder="몬스터 이름 검색"
+              aria-autocomplete="list"
+              aria-controls="monsterAutocomplete"
+              aria-expanded="false"
+            />
+            <div
+              id="monsterAutocomplete"
+              class="autocomplete-list hidden"
+              role="listbox"
+            ></div>
+            <div id="monsterPresetSelected" class="preset-selected hidden"></div>
+          </div>
+
+          <div class="field">
+            <label for="mobLevel">몬스터 레벨</label>
+            <input
+              id="mobLevel"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="ex) 180"
+              data-min="1"
+              data-max="200"
+            />
+          </div>
+
+          <div class="field">
+            <label for="mobAcc">몬스터 명중률</label>
+            <input
+              id="mobAcc"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="ex) 270"
+              data-min="1"
+              data-max="1000"
+            />
+          </div>
+
+          <div class="field">
+            <label for="mobAvoid">몬스터 회피율</label>
+            <input
+              id="mobAvoid"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="ex) 55"
+              data-min="1"
+              data-max="1000"
+            />
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="actions">
+      <button id="resetButton" type="button">입력 초기화</button>
+    </div>
+
+    <section class="card results" aria-live="polite">
+      <h2>계산 결과</h2>
+
+      <p id="emptyMessage" class="empty">
+        값을 입력하면 계산 가능한 항목이 표시됩니다.
+      </p>
+
+      <div id="resultGrid" class="result-grid hidden">
+        <div id="requiredAccItem" class="result-item hidden">
+          <div class="result-label">100% 타격 필요 명중률</div>
+          <div id="requiredAccValue" class="result-value good">-</div>
+          <div id="requiredAccPenaltyRate" class="result-sub hidden"></div>
+          <div id="requiredAccPenaltyTotal" class="result-sub hidden"></div>
+        </div>
+
+        <div id="hitChanceItem" class="result-item hidden">
+          <div class="result-label">타격 명중 확률</div>
+          <div id="hitChanceValue" class="result-value">-</div>
+        </div>
+
+        <div id="physicalMissItem" class="result-item hidden">
+          <div class="result-label">피격 시 물리공격 회피 확률</div>
+          <div id="physicalSingleResult">
+            <div id="physicalMissValue" class="result-value">-</div>
+          </div>
+
+          <div id="physicalAvoidChange" class="avoid-change hidden">
+            <div id="physicalAvoidPerOne"></div>
+            <div id="physicalAvoidPerFive"></div>
+            <div id="physicalAvoidPerTen"></div>
+          </div>
+        </div>
+
+        <div id="magicMissItem" class="result-item hidden">
+          <div class="result-label">피격 시 마법공격 회피 확률</div>
+          <div id="magicSingleResult">
+            <div id="magicMissValue" class="result-value">-</div>
+          </div>
+
+          <div id="magicAvoidChange" class="avoid-change hidden">
+            <div id="magicAvoidPerOne"></div>
+            <div id="magicAvoidPerFive"></div>
+            <div id="magicAvoidPerTen"></div>
+          </div>
+        </div>
+      </div>
+
+      <p id="errorMessage" class="error hidden"></p>
+    </section>
+
+    <section id="avoidChartCard" class="card chart-card hidden">
+      <div class="chart-header">
+        <div>
+          <h2>회피율 그래프</h2>
+          <p id="avoidChartSummary" class="chart-summary"></p>
+        </div>
+      </div>
+
+      <div class="chart-legend" aria-hidden="true">
+        <span class="legend-item legend-physical">
+          <span class="legend-line"></span>
+          물리공격 회피
+        </span>
+        <span class="legend-item legend-magic">
+          <span class="legend-line"></span>
+          마법공격 회피
+        </span>
+        <span class="legend-item legend-current">
+          <span class="legend-line"></span>
+          현재 회피율
+        </span>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="avoidChart"></canvas>
+        <div id="avoidChartHoverLine" class="chart-hover-line hidden"></div>
+        <div id="avoidChartTooltip" class="chart-tooltip hidden"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="monster-presets.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
