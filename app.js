@@ -752,7 +752,7 @@
       const physicalColor = "#72b7ff";
       const magicColor = "#d697ff";
       const currentColor = "#ffd477";
-      const physicalLimitColor = "#7ee2a8";
+      const physicalLimitColor = physicalColor;
       const physicalLimits = getPhysicalLimits();
 
       context.clearRect(
