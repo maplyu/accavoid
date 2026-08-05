@@ -1934,3 +1934,165 @@
         });
       });
     })();
+
+
+    /*
+     * Mobile gesture guard
+     * - blocks pinch / gesture zoom
+     * - blocks double-tap zoom
+     * - blocks horizontal page dragging
+     * - blocks pull-to-refresh at the page top
+     * - keeps range sliders fully draggable
+     */
+    (() => {
+      const mobileMedia =
+        window.matchMedia("(max-width: 900px)");
+
+      let lastTouchEnd = 0;
+      let touchStartX = 0;
+      let touchStartY = 0;
+
+      function isRangeControl(target) {
+        return (
+          target instanceof HTMLInputElement &&
+          target.type === "range"
+        );
+      }
+
+      function preventGesture(event) {
+        if (!mobileMedia.matches) {
+          return;
+        }
+
+        event.preventDefault();
+      }
+
+      document.addEventListener(
+        "gesturestart",
+        preventGesture,
+        { passive: false }
+      );
+
+      document.addEventListener(
+        "gesturechange",
+        preventGesture,
+        { passive: false }
+      );
+
+      document.addEventListener(
+        "gestureend",
+        preventGesture,
+        { passive: false }
+      );
+
+      document.addEventListener(
+        "touchstart",
+        (event) => {
+          if (!mobileMedia.matches) {
+            return;
+          }
+
+          if (event.touches.length > 1) {
+            event.preventDefault();
+            return;
+          }
+
+          const touch = event.touches[0];
+
+          if (!touch) {
+            return;
+          }
+
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+        },
+        { passive: false }
+      );
+
+      document.addEventListener(
+        "touchmove",
+        (event) => {
+          if (!mobileMedia.matches) {
+            return;
+          }
+
+          if (event.touches.length > 1) {
+            event.preventDefault();
+            return;
+          }
+
+          if (isRangeControl(event.target)) {
+            return;
+          }
+
+          const touch = event.touches[0];
+
+          if (!touch) {
+            return;
+          }
+
+          const deltaX =
+            touch.clientX - touchStartX;
+
+          const deltaY =
+            touch.clientY - touchStartY;
+
+          /*
+           * 가로 이동 의도가 더 강하면 페이지 이동을 차단합니다.
+           */
+          if (
+            Math.abs(deltaX) >
+            Math.abs(deltaY)
+          ) {
+            event.preventDefault();
+            return;
+          }
+
+          /*
+           * 문서 최상단에서 아래로 당기는 동작을 차단해
+           * pull-to-refresh와 상단 rubber-band를 막습니다.
+           */
+          if (
+            window.scrollY <= 0 &&
+            deltaY > 0
+          ) {
+            event.preventDefault();
+          }
+        },
+        { passive: false }
+      );
+
+      document.addEventListener(
+        "touchend",
+        (event) => {
+          if (!mobileMedia.matches) {
+            return;
+          }
+
+          const now = Date.now();
+
+          if (
+            now - lastTouchEnd <= 300 &&
+            !isRangeControl(event.target)
+          ) {
+            event.preventDefault();
+          }
+
+          lastTouchEnd = now;
+        },
+        { passive: false }
+      );
+
+      document.addEventListener(
+        "dblclick",
+        (event) => {
+          if (
+            mobileMedia.matches &&
+            !isRangeControl(event.target)
+          ) {
+            event.preventDefault();
+          }
+        },
+        { passive: false }
+      );
+    })();
