@@ -2354,27 +2354,26 @@
     })();
 
     /*
-     * Touch keyboard dismissal with a focus grace period.
+     * Touch-only keyboard dismissal.
      *
-     * Prevents a field tap or tiny finger movement from being mistaken
-     * for scrolling. The keyboard closes only after:
-     * - at least 120 ms has passed since touch start,
-     * - at least 12 px of mostly vertical movement,
-     * - and at least 400 ms has passed since the field received focus.
+     * iOS automatically fires window and VisualViewport scroll events while
+     * opening the keyboard. Those events must never close the keyboard.
+     *
+     * The keyboard is dismissed only when the user's finger performs a real,
+     * clearly vertical drag after touching outside a range slider.
      */
     (() => {
       const touchDevice =
         navigator.maxTouchPoints > 0 ||
         window.matchMedia("(pointer: coarse)").matches;
 
-      const FOCUS_GRACE_MS = 400;
-      const TOUCH_GRACE_MS = 120;
-      const MOVE_THRESHOLD_PX = 12;
+      const TOUCH_GRACE_MS = 140;
+      const MOVE_THRESHOLD_PX = 14;
 
       let startX = 0;
       let startY = 0;
       let touchStartedAt = 0;
-      let lastEditableFocusAt = 0;
+      let startedOnEditable = false;
       let dismissedForGesture = false;
 
       function isRangeInput(element) {
@@ -2393,47 +2392,17 @@
         );
       }
 
-      function focusGraceActive() {
-        return (
-          Date.now() - lastEditableFocusAt <
-          FOCUS_GRACE_MS
-        );
-      }
-
       function dismissKeyboard() {
-        if (
-          !touchDevice ||
-          focusGraceActive()
-        ) {
-          return;
-        }
-
         const active = document.activeElement;
 
         if (
+          touchDevice &&
           canOwnKeyboard(active) &&
           !isRangeInput(active)
         ) {
           active.blur();
         }
       }
-
-      document.addEventListener(
-        "focusin",
-        (event) => {
-          if (
-            touchDevice &&
-            canOwnKeyboard(event.target) &&
-            !isRangeInput(event.target)
-          ) {
-            lastEditableFocusAt = Date.now();
-          }
-        },
-        {
-          passive: true,
-          capture: true
-        }
-      );
 
       document.addEventListener(
         "touchstart",
@@ -2450,7 +2419,9 @@
 
           startX = touch.clientX;
           startY = touch.clientY;
-          touchStartedAt = Date.now();
+          touchStartedAt = performance.now();
+          startedOnEditable =
+            canOwnKeyboard(event.target);
           dismissedForGesture = false;
         },
         {
@@ -2466,13 +2437,13 @@
             !touchDevice ||
             dismissedForGesture ||
             isRangeInput(event.target) ||
-            focusGraceActive()
+            startedOnEditable
           ) {
             return;
           }
 
           if (
-            Date.now() - touchStartedAt <
+            performance.now() - touchStartedAt <
             TOUCH_GRACE_MS
           ) {
             return;
@@ -2490,11 +2461,11 @@
           const deltaY =
             Math.abs(touch.clientY - startY);
 
-          const clearlyVertical =
+          const realVerticalDrag =
             deltaY >= MOVE_THRESHOLD_PX &&
-            deltaY >= deltaX * 1.15;
+            deltaY >= deltaX * 1.2;
 
-          if (clearlyVertical) {
+          if (realVerticalDrag) {
             dismissedForGesture = true;
             dismissKeyboard();
           }
@@ -2503,37 +2474,5 @@
           passive: true,
           capture: true
         }
-      );
-
-      function dismissOnActualScroll() {
-        if (
-          !touchDevice ||
-          focusGraceActive()
-        ) {
-          return;
-        }
-
-        dismissKeyboard();
-      }
-
-      document.addEventListener(
-        "scroll",
-        dismissOnActualScroll,
-        {
-          passive: true,
-          capture: true
-        }
-      );
-
-      window.addEventListener(
-        "scroll",
-        dismissOnActualScroll,
-        { passive: true }
-      );
-
-      window.visualViewport?.addEventListener(
-        "scroll",
-        dismissOnActualScroll,
-        { passive: true }
       );
     })();
