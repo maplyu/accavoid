@@ -22,6 +22,32 @@
       document.getElementById("monsterAutocomplete");
     const monsterPresetSelected =
       document.getElementById("monsterPresetSelected");
+    const monsterPresetClear =
+      document.getElementById("monsterPresetClear");
+
+    const monsterDetailCard =
+      document.getElementById("monsterDetailCard");
+    const monsterDetailImage =
+      document.getElementById("monsterDetailImage");
+    const monsterDetailRegion =
+      document.getElementById("monsterDetailRegion");
+    const monsterDetailName =
+      document.getElementById("monsterDetailName");
+    const monsterDetailLevel =
+      document.getElementById("monsterDetailLevel");
+
+    const monsterDetailValues = {
+      hp: document.getElementById("monsterDetailHp"),
+      mp: document.getElementById("monsterDetailMp"),
+      exp: document.getElementById("monsterDetailExp"),
+      acc: document.getElementById("monsterDetailAcc"),
+      avoid: document.getElementById("monsterDetailAvoid"),
+      speed: document.getElementById("monsterDetailSpeed"),
+      watt: document.getElementById("monsterDetailWatt"),
+      matt: document.getElementById("monsterDetailMatt"),
+      wdef: document.getElementById("monsterDetailWdef"),
+      mdef: document.getElementById("monsterDetailMdef")
+    };
 
     let applyingPreset = false;
     let selectedMonsterId = null;
@@ -229,6 +255,23 @@
         .map((item) => item.monster);
     }
 
+    function getSelectedMonster() {
+      if (selectedMonsterId === null) {
+        return null;
+      }
+
+      return MONSTER_PRESETS.find(
+        (monster) => monster.id === selectedMonsterId
+      ) || null;
+    }
+
+    function updatePresetClearButton() {
+      monsterPresetClear.classList.toggle(
+        "hidden",
+        monsterPresetSearch.value.trim() === ""
+      );
+    }
+
     function closeAutocomplete() {
       monsterAutocomplete.classList.add("hidden");
       monsterPresetSearch.setAttribute("aria-expanded", "false");
@@ -256,13 +299,54 @@
       }
     }
 
-    function renderAutocomplete(query) {
-      const normalizedQuery = query.trim();
+    function createAutocompleteButton(monster, index, selected = false) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "autocomplete-item";
+      button.setAttribute("role", "option");
+      button.dataset.index = String(index);
 
-      autocompleteMatches =
-        normalizedQuery === ""
-          ? [...MONSTER_PRESETS]
-          : findMonsterMatches(normalizedQuery);
+      if (selected) {
+        button.classList.add("selected");
+        button.setAttribute("aria-selected", "true");
+      }
+
+      const name = document.createElement("span");
+      name.className = "autocomplete-name";
+      name.textContent = monster.name;
+
+      const level = document.createElement("span");
+      level.className = "autocomplete-level";
+      level.textContent = `Lv.${monster.level}`;
+
+      button.append(name, level);
+
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        selectMonsterPreset(monster);
+      });
+
+      return button;
+    }
+
+    function renderAutocomplete(query, options = {}) {
+      const normalizedQuery = query.trim();
+      const selectedMonster = getSelectedMonster();
+      const showFullList =
+        options.showFullList === true ||
+        (
+          selectedMonster !== null &&
+          normalizedQuery === selectedMonster.name
+        );
+
+      if (showFullList) {
+        autocompleteMatches = [...MONSTER_PRESETS];
+      } else {
+        autocompleteMatches =
+          normalizedQuery === ""
+            ? [...MONSTER_PRESETS]
+            : findMonsterMatches(normalizedQuery);
+      }
 
       activeAutocompleteIndex = -1;
       monsterAutocomplete.innerHTML = "";
@@ -272,33 +356,55 @@
         return;
       }
 
+      if (showFullList && selectedMonster) {
+        monsterAutocomplete.appendChild(
+          createAutocompleteButton(
+            selectedMonster,
+            -1,
+            true
+          )
+        );
+
+        const separator = document.createElement("div");
+        separator.className = "autocomplete-separator";
+        separator.setAttribute("aria-hidden", "true");
+        monsterAutocomplete.appendChild(separator);
+      }
+
       autocompleteMatches.forEach((monster, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "autocomplete-item";
-        button.setAttribute("role", "option");
-        button.dataset.index = String(index);
-
-        const name = document.createElement("span");
-        name.className = "autocomplete-name";
-        name.textContent = monster.name;
-
-        const level = document.createElement("span");
-        level.className = "autocomplete-level";
-        level.textContent = `Lv.${monster.level}`;
-
-        button.append(name, level);
-
-        button.addEventListener("mousedown", (event) => {
-          event.preventDefault();
-          selectMonsterPreset(monster);
-        });
-
-        monsterAutocomplete.appendChild(button);
+        monsterAutocomplete.appendChild(
+          createAutocompleteButton(monster, index)
+        );
       });
 
       monsterAutocomplete.classList.remove("hidden");
       monsterPresetSearch.setAttribute("aria-expanded", "true");
+    }
+
+    function formatMonsterNumber(value) {
+      return Number.isFinite(value)
+        ? value.toLocaleString("ko-KR")
+        : "-";
+    }
+
+    function showMonsterDetail(monster) {
+      monsterDetailImage.src = `images/mob/${monster.id}.png`;
+      monsterDetailImage.alt = `${monster.name} 이미지`;
+      monsterDetailRegion.textContent = monster.region || "";
+      monsterDetailName.textContent = monster.name;
+      monsterDetailLevel.textContent = `Lv.${monster.level}`;
+
+      Object.entries(monsterDetailValues).forEach(([key, element]) => {
+        element.textContent = formatMonsterNumber(monster[key]);
+      });
+
+      monsterDetailCard.classList.remove("hidden");
+    }
+
+    function hideMonsterDetail() {
+      monsterDetailCard.classList.add("hidden");
+      monsterDetailImage.removeAttribute("src");
+      monsterDetailImage.alt = "";
     }
 
     function selectMonsterPreset(monster) {
@@ -313,10 +419,16 @@
       monsterPresetSelected.textContent =
         `${getPresetLabel(monster)} 선택됨`;
       monsterPresetSelected.classList.remove("hidden");
+      showMonsterDetail(monster);
 
       applyingPreset = false;
+      updatePresetClearButton();
       closeAutocomplete();
       calculate();
+
+      window.requestAnimationFrame(() => {
+        monsterPresetSearch.blur();
+      });
     }
 
     function markPresetAsCustom() {
@@ -324,7 +436,10 @@
         selectedMonsterId = null;
         monsterPresetSelected.textContent = "";
         monsterPresetSelected.classList.add("hidden");
+        hideMonsterDetail();
       }
+
+      updatePresetClearButton();
     }
 
     function sanitizeAndClampInput(input) {
@@ -1313,24 +1428,41 @@
 
       inputs[id].addEventListener("blur", (event) => {
         sanitizeAndClampInput(event.currentTarget);
-
-        if (["mobLevel", "mobAcc", "mobAvoid"].includes(id)) {
-          markPresetAsCustom();
-        }
-
         calculate();
       });
     });
 
     isThiefJob.addEventListener("change", calculate);
+    updatePresetClearButton();
 
     monsterPresetSearch.addEventListener("input", () => {
       markPresetAsCustom();
+      updatePresetClearButton();
       renderAutocomplete(monsterPresetSearch.value);
     });
 
     monsterPresetSearch.addEventListener("focus", () => {
-      renderAutocomplete(monsterPresetSearch.value);
+      const selectedMonster = getSelectedMonster();
+
+      renderAutocomplete(
+        monsterPresetSearch.value,
+        {
+          showFullList:
+            selectedMonster !== null &&
+            monsterPresetSearch.value === selectedMonster.name
+        }
+      );
+    });
+
+    monsterPresetSearch.addEventListener("click", () => {
+      const selectedMonster = getSelectedMonster();
+
+      if (
+        selectedMonster !== null &&
+        monsterPresetSearch.value === selectedMonster.name
+      ) {
+        renderAutocomplete("", { showFullList: true });
+      }
     });
 
     monsterPresetSearch.addEventListener("keydown", (event) => {
@@ -1373,6 +1505,22 @@
       }
     });
 
+    monsterPresetClear.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+
+    monsterPresetClear.addEventListener("click", () => {
+      monsterPresetSearch.value = "";
+      selectedMonsterId = null;
+      monsterPresetSelected.textContent = "";
+      monsterPresetSelected.classList.add("hidden");
+      hideMonsterDetail();
+      updatePresetClearButton();
+
+      monsterPresetSearch.focus();
+      renderAutocomplete("", { showFullList: true });
+    });
+
     monsterPresetSearch.addEventListener("blur", () => {
       window.setTimeout(closeAutocomplete, 120);
     });
@@ -1385,10 +1533,12 @@
         });
 
         monsterPresetSearch.value = "";
+        updatePresetClearButton();
         isThiefJob.checked = false;
         selectedMonsterId = null;
         monsterPresetSelected.textContent = "";
         monsterPresetSelected.classList.add("hidden");
+        hideMonsterDetail();
         closeAutocomplete();
 
         calculate();

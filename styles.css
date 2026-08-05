@@ -124,8 +124,42 @@
       position: relative;
     }
 
-    .preset-search {
+    .preset-search-wrap {
+      position: relative;
       margin-top: 8px;
+    }
+
+    .preset-search {
+      margin-top: 0;
+      padding-right: 42px !important;
+    }
+
+    .preset-clear {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      font-size: 20px;
+      font-weight: 300;
+      line-height: 24px;
+      text-align: center;
+      cursor: pointer;
+      transform: translateY(-50%);
+      opacity: 0.72;
+    }
+
+    .preset-clear:hover,
+    .preset-clear:focus-visible {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      opacity: 1;
+      outline: none;
     }
 
     .autocomplete-list {
@@ -164,6 +198,25 @@
     .autocomplete-item:hover,
     .autocomplete-item.active {
       background: rgba(122, 184, 255, 0.12);
+    }
+
+    .autocomplete-item.selected {
+      background: rgba(122, 184, 255, 0.09);
+    }
+
+    .autocomplete-item.selected .autocomplete-name::after {
+      content: "선택됨";
+      margin-left: 8px;
+      color: var(--accent);
+      font-size: 0.74rem;
+      font-weight: 400;
+    }
+
+    .autocomplete-separator {
+      height: 1px;
+      margin: 5px 10px;
+      background: var(--line);
+      pointer-events: none;
     }
 
     .autocomplete-name {
@@ -449,5 +502,127 @@
       .card {
         padding: 18px;
         border-radius: 15px;
+      }
+    }
+
+
+    .monster-detail {
+      margin-top: 18px;
+    }
+
+    .monster-detail-layout {
+      display: grid;
+      grid-template-columns: 170px minmax(0, 1fr);
+      gap: 22px;
+      align-items: center;
+    }
+
+    .monster-image-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 170px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--panel-2);
+    }
+
+    .monster-image {
+      display: block;
+      max-width: 100%;
+      max-height: 150px;
+      object-fit: contain;
+      image-rendering: auto;
+    }
+
+    .monster-detail-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .monster-detail-heading h2 {
+      margin: 2px 0 0;
+      font-size: clamp(1.35rem, 4vw, 2rem);
+      letter-spacing: -0.035em;
+    }
+
+    .monster-region {
+      margin: 0;
+      color: var(--accent);
+      font-size: 0.84rem;
+    }
+
+    .monster-level {
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .monster-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 9px;
+      margin: 0;
+    }
+
+    .monster-stat-grid > div {
+      min-width: 0;
+      padding: 10px 11px;
+      border: 1px solid rgba(52, 59, 73, 0.78);
+      border-radius: 11px;
+      background: var(--panel-2);
+    }
+
+    .monster-stat-grid dt {
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.35;
+    }
+
+    .monster-stat-grid dd {
+      margin: 5px 0 0;
+      overflow-wrap: anywhere;
+      color: var(--text);
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 820px) {
+      .monster-detail-layout {
+        grid-template-columns: 120px minmax(0, 1fr);
+      }
+
+      .monster-image-wrap {
+        min-height: 120px;
+      }
+
+      .monster-image {
+        max-height: 100px;
+      }
+
+      .monster-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 520px) {
+      .monster-detail-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .monster-image-wrap {
+        min-height: 140px;
+      }
+
+      .monster-image {
+        max-height: 120px;
       }
     }
