@@ -40,6 +40,12 @@
       document.getElementById("monsterPresetSearch");
     const monsterAutocomplete =
       document.getElementById("monsterAutocomplete");
+
+    const mobileAutocompleteBackdrop =
+      document.getElementById("mobileAutocompleteBackdrop");
+
+    const mobileAutocompleteMedia =
+      window.matchMedia("(max-width: 900px)");
     const monsterPresetSelected =
       document.getElementById("monsterPresetSelected");
     const monsterPresetClear =
@@ -301,10 +307,85 @@
       );
     }
 
+    function updateMobileAutocompletePosition() {
+      if (
+        !mobileAutocompleteMedia.matches ||
+        monsterAutocomplete.classList.contains("hidden")
+      ) {
+        return;
+      }
+
+      const viewport =
+        window.visualViewport;
+
+      const viewportTop =
+        viewport ? viewport.offsetTop : 0;
+
+      const viewportHeight =
+        viewport ? viewport.height : window.innerHeight;
+
+      const searchRect =
+        monsterPresetSearch.getBoundingClientRect();
+
+      /*
+       * Keep the sheet below the search box when possible.
+       * When the keyboard leaves little room, use the viewport top.
+       */
+      const preferredTop =
+        searchRect.bottom + 8;
+
+      const maximumTop =
+        viewportTop +
+        Math.max(78, viewportHeight * 0.32);
+
+      const top =
+        Math.min(
+          Math.max(
+            preferredTop,
+            viewportTop + 10
+          ),
+          maximumTop
+        );
+
+      document.documentElement.style.setProperty(
+        "--mobile-autocomplete-top",
+        `${Math.round(top)}px`
+      );
+    }
+
+    function openMobileAutocompleteSheet() {
+      if (!mobileAutocompleteMedia.matches) {
+        return;
+      }
+
+      document.body.classList.add(
+        "mobile-autocomplete-open"
+      );
+
+      mobileAutocompleteBackdrop.classList.remove(
+        "hidden"
+      );
+
+      window.requestAnimationFrame(
+        updateMobileAutocompletePosition
+      );
+    }
+
+    function closeMobileAutocompleteSheet() {
+      document.body.classList.remove(
+        "mobile-autocomplete-open"
+      );
+
+      mobileAutocompleteBackdrop.classList.add(
+        "hidden"
+      );
+    }
+
     function closeAutocomplete() {
       monsterAutocomplete.classList.add("hidden");
       monsterPresetSearch.setAttribute("aria-expanded", "false");
       activeAutocompleteIndex = -1;
+      closeMobileAutocompleteSheet();
     }
 
     function updateActiveAutocompleteItem() {
@@ -440,6 +521,7 @@
 
       monsterAutocomplete.classList.remove("hidden");
       monsterPresetSearch.setAttribute("aria-expanded", "true");
+      openMobileAutocompleteSheet();
     }
 
     function formatMonsterNumber(value) {
@@ -1789,8 +1871,115 @@
     });
 
     monsterPresetSearch.addEventListener("blur", () => {
+      if (
+        mobileAutocompleteMedia.matches &&
+        !monsterAutocomplete.classList.contains("hidden")
+      ) {
+        return;
+      }
+
       window.setTimeout(closeAutocomplete, 120);
     });
+
+    mobileAutocompleteBackdrop.addEventListener(
+      "click",
+      () => {
+        monsterPresetSearch.blur();
+        closeAutocomplete();
+      }
+    );
+
+    let mobileAutocompleteTouchStartY = null;
+    let mobileAutocompleteKeyboardDismissed = false;
+
+    monsterAutocomplete.addEventListener(
+      "touchstart",
+      (event) => {
+        const touch = event.touches[0];
+
+        mobileAutocompleteTouchStartY =
+          touch ? touch.clientY : null;
+      },
+      { passive: true }
+    );
+
+    monsterAutocomplete.addEventListener(
+      "touchmove",
+      (event) => {
+        if (
+          !mobileAutocompleteMedia.matches ||
+          mobileAutocompleteKeyboardDismissed
+        ) {
+          return;
+        }
+
+        const touch = event.touches[0];
+
+        if (
+          !touch ||
+          mobileAutocompleteTouchStartY === null
+        ) {
+          return;
+        }
+
+        const movement =
+          Math.abs(
+            touch.clientY -
+            mobileAutocompleteTouchStartY
+          );
+
+        /*
+         * A real list drag has started.
+         * Dismiss the software keyboard but keep the sheet open.
+         */
+        if (movement >= 8) {
+          mobileAutocompleteKeyboardDismissed = true;
+          monsterPresetSearch.blur();
+
+          window.setTimeout(() => {
+            updateMobileAutocompletePosition();
+          }, 180);
+        }
+      },
+      { passive: true }
+    );
+
+    monsterAutocomplete.addEventListener(
+      "touchend",
+      () => {
+        mobileAutocompleteTouchStartY = null;
+      },
+      { passive: true }
+    );
+
+    monsterPresetSearch.addEventListener(
+      "focus",
+      () => {
+        mobileAutocompleteKeyboardDismissed = false;
+      }
+    );
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener(
+        "resize",
+        updateMobileAutocompletePosition
+      );
+
+      window.visualViewport.addEventListener(
+        "scroll",
+        updateMobileAutocompletePosition
+      );
+    }
+
+    window.addEventListener(
+      "orientationchange",
+      () => {
+        window.setTimeout(
+          updateMobileAutocompletePosition,
+          180
+        );
+      }
+    );
 
     document
       .getElementById("resetButton")

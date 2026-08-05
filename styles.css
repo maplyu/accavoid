@@ -1523,50 +1523,89 @@
     }
 
 
-    /*
-     * Mobile autocomplete layering fix
-     * Keep the monster list above the remaining monster input fields.
-     */
-    .monster-input-card,
-    .monster-input-card .fields,
-    .preset-field,
-    .preset-search-wrap {
-      overflow: visible;
-    }
-
-    .preset-field {
-      z-index: 1;
-    }
-
-    .preset-field:focus-within {
-      z-index: 300;
-    }
-
-    .autocomplete-list {
-      z-index: 999;
+    .mobile-autocomplete-backdrop {
+      display: none;
     }
 
     @media (max-width: 900px) {
-      .preset-field:focus-within {
-        position: relative;
-        z-index: 1000;
+      body.mobile-autocomplete-open {
+        overflow: hidden;
       }
 
+      .mobile-autocomplete-backdrop {
+        position: fixed;
+        z-index: 1990;
+        inset: 0;
+        display: block;
+        background: rgba(5, 7, 11, 0.54);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+        opacity: 1;
+        transition: opacity 150ms ease;
+      }
+
+      .mobile-autocomplete-backdrop.hidden {
+        display: none;
+      }
+
+      /*
+       * The monster list becomes an independent mobile sheet.
+       * CSS variables are updated from VisualViewport in app.js.
+       */
       .autocomplete-list {
-        z-index: 1001;
-        max-height: min(
-          56dvh,
-          calc(100dvh - 170px)
-        );
-        padding-bottom: max(
+        position: fixed;
+        z-index: 2000;
+        top: var(--mobile-autocomplete-top, 108px);
+        right: 10px;
+        bottom: max(
           10px,
           env(safe-area-inset-bottom)
         );
-        scroll-padding-bottom: 18px;
+        left: 10px;
+        width: auto;
+        max-height: none;
+        margin: 0;
+        padding:
+          6px
+          0
+          max(12px, env(safe-area-inset-bottom));
+        border: 1px solid rgba(122, 184, 255, 0.24);
+        border-radius: 18px;
+        background: rgba(24, 28, 36, 0.98);
+        box-shadow:
+          0 24px 70px rgba(0, 0, 0, 0.58),
+          inset 0 1px 0 rgba(255, 255, 255, 0.025);
+        overflow-x: hidden;
+        overflow-y: auto;
         overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        scroll-padding-top: 8px;
+        scroll-padding-bottom: 24px;
+      }
+
+      .autocomplete-list::before {
+        content: "몬스터 선택";
+        position: sticky;
+        z-index: 2;
+        top: -6px;
+        display: block;
+        padding: 13px 15px 12px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(24, 28, 36, 0.96);
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .autocomplete-item {
+        min-height: 58px;
+        padding: 10px 14px;
       }
 
       .autocomplete-item:last-child {
-        margin-bottom: 6px;
+        margin-bottom: 10px;
       }
     }
