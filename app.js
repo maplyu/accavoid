@@ -40,12 +40,14 @@
       document.getElementById("monsterPresetSearch");
     const monsterAutocomplete =
       document.getElementById("monsterAutocomplete");
-
-    const mobileAutocompleteBackdrop =
-      document.getElementById("mobileAutocompleteBackdrop");
-
     const mobileAutocompleteMedia =
       window.matchMedia("(max-width: 900px)");
+
+    let mobileListTouchStartY = 0;
+    let mobileListTouchMoved = false;
+    let mobileListTouchButton = null;
+    let suppressAutocompleteClickUntil = 0;
+
     const monsterPresetSelected =
       document.getElementById("monsterPresetSelected");
     const monsterPresetClear =
@@ -307,7 +309,7 @@
       );
     }
 
-    function updateMobileAutocompletePosition() {
+    function updateMobileMonsterListBounds() {
       if (
         !mobileAutocompleteMedia.matches ||
         monsterAutocomplete.classList.contains("hidden")
@@ -315,77 +317,78 @@
         return;
       }
 
-      const viewport =
-        window.visualViewport;
-
+      const viewport = window.visualViewport;
       const viewportTop =
         viewport ? viewport.offsetTop : 0;
-
       const viewportHeight =
         viewport ? viewport.height : window.innerHeight;
 
       const searchRect =
         monsterPresetSearch.getBoundingClientRect();
 
-      /*
-       * Keep the sheet below the search box when possible.
-       * When the keyboard leaves little room, use the viewport top.
-       */
-      const preferredTop =
-        searchRect.bottom + 8;
+      const keyboardLikelyOpen =
+        viewport &&
+        viewportHeight < window.innerHeight * 0.78;
 
-      const maximumTop =
-        viewportTop +
-        Math.max(78, viewportHeight * 0.32);
+      const top = keyboardLikelyOpen
+        ? Math.max(viewportTop + 8, searchRect.bottom + 8)
+        : Math.max(viewportTop + 10, searchRect.bottom + 8);
 
-      const top =
-        Math.min(
-          Math.max(
-            preferredTop,
-            viewportTop + 10
-          ),
-          maximumTop
-        );
+      const availableHeight =
+        viewportTop + viewportHeight - top - 10;
 
       document.documentElement.style.setProperty(
-        "--mobile-autocomplete-top",
+        "--mobile-monster-list-top",
         `${Math.round(top)}px`
+      );
+
+      document.documentElement.style.setProperty(
+        "--mobile-monster-list-height",
+        `${Math.max(180, Math.round(availableHeight))}px`
       );
     }
 
-    function openMobileAutocompleteSheet() {
+    function addMobileMonsterListHeader() {
       if (!mobileAutocompleteMedia.matches) {
         return;
       }
 
-      document.body.classList.add(
-        "mobile-autocomplete-open"
-      );
+      const existing =
+        monsterAutocomplete.querySelector(
+          ".mobile-monster-list-header"
+        );
 
-      mobileAutocompleteBackdrop.classList.remove(
-        "hidden"
-      );
+      if (existing) {
+        return;
+      }
 
-      window.requestAnimationFrame(
-        updateMobileAutocompletePosition
-      );
-    }
+      const header = document.createElement("div");
+      header.className = "mobile-monster-list-header";
 
-    function closeMobileAutocompleteSheet() {
-      document.body.classList.remove(
-        "mobile-autocomplete-open"
-      );
+      const title = document.createElement("span");
+      title.className = "mobile-monster-list-title";
+      title.textContent = "몬스터 선택";
 
-      mobileAutocompleteBackdrop.classList.add(
-        "hidden"
-      );
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.className = "mobile-monster-list-close";
+      closeButton.textContent = "닫기";
+
+      closeButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        monsterPresetSearch.blur();
+        closeAutocomplete();
+      });
+
+      header.append(title, closeButton);
+      monsterAutocomplete.prepend(header);
     }
 
     function closeAutocomplete() {
       monsterAutocomplete.classList.add("hidden");
       monsterPresetSearch.setAttribute("aria-expanded", "false");
       activeAutocompleteIndex = -1;
-      closeMobileAutocompleteSheet();
     }
 
     function updateActiveAutocompleteItem() {
@@ -463,33 +466,26 @@
       main.append(nameWrap, level);
       button.append(thumbnailWrap, main);
 
-      /*
-       * Desktop:
-       * Keep the search field from blurring before the click completes.
-       *
-       * Mobile:
-       * Selection is handled by click. A drag used for list scrolling
-       * does not generate a click, so scrolling remains natural.
-       */
       button.addEventListener("mousedown", (event) => {
-        if (event.button === 0) {
+        if (
+          !mobileAutocompleteMedia.matches &&
+          event.button === 0
+        ) {
           event.preventDefault();
+          selectMonsterPreset(monster);
         }
       });
 
       button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+        if (
+          mobileAutocompleteMedia.matches ||
+          Date.now() < suppressAutocompleteClickUntil
+        ) {
+          event.preventDefault();
+          return;
+        }
 
         selectMonsterPreset(monster);
-
-        /*
-         * Explicit cleanup for mobile Safari.
-         * This guarantees that the dimmed backdrop never remains
-         * after a monster has been selected.
-         */
-        closeAutocomplete();
-        closeMobileAutocompleteSheet();
       });
 
       return button;
@@ -545,7 +541,14 @@
 
       monsterAutocomplete.classList.remove("hidden");
       monsterPresetSearch.setAttribute("aria-expanded", "true");
-      openMobileAutocompleteSheet();
+
+      if (mobileAutocompleteMedia.matches) {
+        addMobileMonsterListHeader();
+
+        window.requestAnimationFrame(
+          updateMobileMonsterListBounds
+        );
+      }
     }
 
     function formatMonsterNumber(value) {
@@ -624,8 +627,6 @@
 
       window.requestAnimationFrame(() => {
         monsterPresetSearch.blur();
-        closeAutocomplete();
-        closeMobileAutocompleteSheet();
       });
     }
 
@@ -1901,30 +1902,47 @@
         mobileAutocompleteMedia.matches &&
         !monsterAutocomplete.classList.contains("hidden")
       ) {
+        window.setTimeout(
+          updateMobileMonsterListBounds,
+          180
+        );
         return;
       }
 
       window.setTimeout(closeAutocomplete, 120);
     });
 
-    mobileAutocompleteBackdrop.addEventListener(
-      "click",
-      () => {
-        monsterPresetSearch.blur();
-        closeAutocomplete();
-      }
-    );
-
-    let mobileAutocompleteTouchStartY = null;
-    let mobileAutocompleteKeyboardDismissed = false;
-
     monsterAutocomplete.addEventListener(
       "touchstart",
       (event) => {
+        if (!mobileAutocompleteMedia.matches) {
+          return;
+        }
+
         const touch = event.touches[0];
 
-        mobileAutocompleteTouchStartY =
-          touch ? touch.clientY : null;
+        mobileListTouchStartY =
+          touch ? touch.clientY : 0;
+
+        mobileListTouchMoved = false;
+        mobileListTouchButton =
+          event.target.closest(".autocomplete-item");
+
+        /*
+         * iOS often consumes the first tap only to dismiss the keyboard.
+         * Blur immediately at touch start, then select explicitly on
+         * touch end when this was a tap rather than a scroll.
+         */
+        if (
+          document.activeElement === monsterPresetSearch
+        ) {
+          monsterPresetSearch.blur();
+
+          window.setTimeout(
+            updateMobileMonsterListBounds,
+            180
+          );
+        }
       },
       { passive: true }
     );
@@ -1932,39 +1950,22 @@
     monsterAutocomplete.addEventListener(
       "touchmove",
       (event) => {
-        if (
-          !mobileAutocompleteMedia.matches ||
-          mobileAutocompleteKeyboardDismissed
-        ) {
+        if (!mobileAutocompleteMedia.matches) {
           return;
         }
 
         const touch = event.touches[0];
 
-        if (
-          !touch ||
-          mobileAutocompleteTouchStartY === null
-        ) {
+        if (!touch) {
           return;
         }
 
-        const movement =
+        if (
           Math.abs(
-            touch.clientY -
-            mobileAutocompleteTouchStartY
-          );
-
-        /*
-         * A real list drag has started.
-         * Dismiss the software keyboard but keep the sheet open.
-         */
-        if (movement >= 8) {
-          mobileAutocompleteKeyboardDismissed = true;
-          monsterPresetSearch.blur();
-
-          window.setTimeout(() => {
-            updateMobileAutocompletePosition();
-          }, 180);
+            touch.clientY - mobileListTouchStartY
+          ) > 8
+        ) {
+          mobileListTouchMoved = true;
         }
       },
       { passive: true }
@@ -1972,28 +1973,59 @@
 
     monsterAutocomplete.addEventListener(
       "touchend",
-      () => {
-        mobileAutocompleteTouchStartY = null;
-      },
-      { passive: true }
-    );
+      (event) => {
+        if (!mobileAutocompleteMedia.matches) {
+          return;
+        }
 
-    monsterPresetSearch.addEventListener(
-      "focus",
-      () => {
-        mobileAutocompleteKeyboardDismissed = false;
-      }
+        const button = mobileListTouchButton;
+
+        mobileListTouchButton = null;
+
+        if (
+          mobileListTouchMoved ||
+          !button
+        ) {
+          return;
+        }
+
+        const index =
+          Number(button.dataset.index);
+
+        let monster = null;
+
+        if (button.classList.contains("selected")) {
+          monster = getSelectedMonster();
+        } else if (
+          Number.isInteger(index) &&
+          index >= 0
+        ) {
+          monster = autocompleteMatches[index] || null;
+        }
+
+        if (!monster) {
+          return;
+        }
+
+        event.preventDefault();
+        suppressAutocompleteClickUntil =
+          Date.now() + 500;
+
+        selectMonsterPreset(monster);
+        closeAutocomplete();
+      },
+      { passive: false }
     );
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener(
         "resize",
-        updateMobileAutocompletePosition
+        updateMobileMonsterListBounds
       );
 
       window.visualViewport.addEventListener(
         "scroll",
-        updateMobileAutocompletePosition
+        updateMobileMonsterListBounds
       );
     }
 
@@ -2001,7 +2033,7 @@
       "orientationchange",
       () => {
         window.setTimeout(
-          updateMobileAutocompletePosition,
+          updateMobileMonsterListBounds,
           180
         );
       }
