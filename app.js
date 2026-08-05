@@ -2354,18 +2354,27 @@
     })();
 
     /*
-     * Touch keyboard dismissal.
-     * Uses physical touch capability, so it works in both mobile and forced
-     * desktop layouts on a phone. Any recognizable vertical scroll gesture
-     * closes the active keyboard. Range sliders are excluded.
+     * Touch keyboard dismissal with a focus grace period.
+     *
+     * Prevents a field tap or tiny finger movement from being mistaken
+     * for scrolling. The keyboard closes only after:
+     * - at least 120 ms has passed since touch start,
+     * - at least 12 px of mostly vertical movement,
+     * - and at least 400 ms has passed since the field received focus.
      */
     (() => {
       const touchDevice =
         navigator.maxTouchPoints > 0 ||
         window.matchMedia("(pointer: coarse)").matches;
 
+      const FOCUS_GRACE_MS = 400;
+      const TOUCH_GRACE_MS = 120;
+      const MOVE_THRESHOLD_PX = 12;
+
       let startX = 0;
       let startY = 0;
+      let touchStartedAt = 0;
+      let lastEditableFocusAt = 0;
       let dismissedForGesture = false;
 
       function isRangeInput(element) {
@@ -2384,8 +2393,18 @@
         );
       }
 
+      function focusGraceActive() {
+        return (
+          Date.now() - lastEditableFocusAt <
+          FOCUS_GRACE_MS
+        );
+      }
+
       function dismissKeyboard() {
-        if (!touchDevice) {
+        if (
+          !touchDevice ||
+          focusGraceActive()
+        ) {
           return;
         }
 
@@ -2398,6 +2417,23 @@
           active.blur();
         }
       }
+
+      document.addEventListener(
+        "focusin",
+        (event) => {
+          if (
+            touchDevice &&
+            canOwnKeyboard(event.target) &&
+            !isRangeInput(event.target)
+          ) {
+            lastEditableFocusAt = Date.now();
+          }
+        },
+        {
+          passive: true,
+          capture: true
+        }
+      );
 
       document.addEventListener(
         "touchstart",
@@ -2414,9 +2450,13 @@
 
           startX = touch.clientX;
           startY = touch.clientY;
+          touchStartedAt = Date.now();
           dismissedForGesture = false;
         },
-        { passive: true, capture: true }
+        {
+          passive: true,
+          capture: true
+        }
       );
 
       document.addEventListener(
@@ -2425,7 +2465,15 @@
           if (
             !touchDevice ||
             dismissedForGesture ||
-            isRangeInput(event.target)
+            isRangeInput(event.target) ||
+            focusGraceActive()
+          ) {
+            return;
+          }
+
+          if (
+            Date.now() - touchStartedAt <
+            TOUCH_GRACE_MS
           ) {
             return;
           }
@@ -2442,32 +2490,50 @@
           const deltaY =
             Math.abs(touch.clientY - startY);
 
-          if (
-            deltaY >= 3 &&
-            deltaY >= deltaX * 0.55
-          ) {
+          const clearlyVertical =
+            deltaY >= MOVE_THRESHOLD_PX &&
+            deltaY >= deltaX * 1.15;
+
+          if (clearlyVertical) {
             dismissedForGesture = true;
             dismissKeyboard();
           }
         },
-        { passive: true, capture: true }
+        {
+          passive: true,
+          capture: true
+        }
       );
+
+      function dismissOnActualScroll() {
+        if (
+          !touchDevice ||
+          focusGraceActive()
+        ) {
+          return;
+        }
+
+        dismissKeyboard();
+      }
 
       document.addEventListener(
         "scroll",
-        dismissKeyboard,
-        { passive: true, capture: true }
+        dismissOnActualScroll,
+        {
+          passive: true,
+          capture: true
+        }
       );
 
       window.addEventListener(
         "scroll",
-        dismissKeyboard,
+        dismissOnActualScroll,
         { passive: true }
       );
 
       window.visualViewport?.addEventListener(
         "scroll",
-        dismissKeyboard,
+        dismissOnActualScroll,
         { passive: true }
       );
     })();

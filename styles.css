@@ -1844,3 +1844,17 @@
     html.force-desktop-view .mobile-view-button {
       display: inline-flex !important;
     }
+
+
+    /*
+     * Small inward adjustment for the header mark.
+     */
+    .brand-mark-wrap {
+      margin-left: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .brand-mark-wrap {
+        margin-left: 6px;
+      }
+    }
