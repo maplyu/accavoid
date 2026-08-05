@@ -16,6 +16,26 @@
     const isThiefJob =
       document.getElementById("isThiefJob");
 
+    const rangeInputs = {
+      userLevel: document.getElementById("userLevelRange"),
+      userAcc: document.getElementById("userAccRange"),
+      userAvoid: document.getElementById("userAvoidRange"),
+      mobLevel: document.getElementById("mobLevelRange"),
+      mobAcc: document.getElementById("mobAccRange"),
+      mobAvoid: document.getElementById("mobAvoidRange")
+    };
+
+    const activationDefaults = {
+      userLevel: 180,
+      userAcc: 180,
+      userAvoid: 100,
+      mobLevel: 180,
+      mobAcc: 270,
+      mobAvoid: 55
+    };
+
+    const activatedInputs = new Set();
+
     const monsterPresetSearch =
       document.getElementById("monsterPresetSearch");
     const monsterAutocomplete =
@@ -35,6 +55,12 @@
       document.getElementById("monsterDetailName");
     const monsterDetailLevel =
       document.getElementById("monsterDetailLevel");
+
+    const monsterManualBadge =
+      document.getElementById("monsterManualBadge");
+
+    const monsterManualOverlay =
+      document.getElementById("monsterManualOverlay");
 
     const monsterDetailValues = {
       hp: document.getElementById("monsterDetailHp"),
@@ -393,6 +419,9 @@
       monsterDetailRegion.textContent = monster.region || "";
       monsterDetailName.textContent = monster.name;
       monsterDetailLevel.textContent = `Lv.${monster.level}`;
+      monsterManualBadge.classList.add("hidden");
+      monsterManualOverlay.classList.add("hidden");
+      monsterDetailCard.classList.remove("is-manual");
 
       Object.entries(monsterDetailValues).forEach(([key, element]) => {
         element.textContent = formatMonsterNumber(monster[key]);
@@ -405,6 +434,9 @@
       monsterDetailCard.classList.add("hidden");
       monsterDetailImage.removeAttribute("src");
       monsterDetailImage.alt = "";
+      monsterManualBadge.classList.add("hidden");
+      monsterManualOverlay.classList.add("hidden");
+      monsterDetailCard.classList.remove("is-manual");
     }
 
     function selectMonsterPreset(monster) {
@@ -412,9 +444,25 @@
       selectedMonsterId = monster.id;
 
       monsterPresetSearch.value = monster.name;
+      ["mobLevel", "mobAcc", "mobAvoid"].forEach(
+        (id) => setInputWaitingState(id, false)
+      );
+
       inputs.mobLevel.value = String(monster.level);
       inputs.mobAcc.value = String(monster.acc);
       inputs.mobAvoid.value = String(monster.avoid);
+
+      rangeInputs.mobLevel.value = String(
+        clamp(monster.level, 1, 200)
+      );
+
+      rangeInputs.mobAcc.value = String(
+        clamp(monster.acc, 1, 500)
+      );
+
+      rangeInputs.mobAvoid.value = String(
+        clamp(monster.avoid, 1, 500)
+      );
 
       monsterPresetSelected.textContent =
         `${getPresetLabel(monster)} 선택됨`;
@@ -431,11 +479,30 @@
       });
     }
 
-    function markPresetAsCustom() {
-      if (!applyingPreset && selectedMonsterId !== null) {
-        selectedMonsterId = null;
-        monsterPresetSelected.textContent = "";
-        monsterPresetSelected.classList.add("hidden");
+    function markPresetAsCustom(options = {}) {
+      const {
+        preserveDetail = false,
+        clearSearch = false
+      } = options;
+
+      if (applyingPreset || selectedMonsterId === null) {
+        updatePresetClearButton();
+        return;
+      }
+
+      selectedMonsterId = null;
+      monsterPresetSelected.textContent = "";
+      monsterPresetSelected.classList.add("hidden");
+
+      if (clearSearch) {
+        monsterPresetSearch.value = "";
+      }
+
+      if (preserveDetail) {
+        monsterManualBadge.classList.add("hidden");
+        monsterManualOverlay.classList.remove("hidden");
+        monsterDetailCard.classList.add("is-manual");
+      } else {
         hideMonsterDetail();
       }
 
@@ -461,6 +528,91 @@
       }
 
       input.value = String(value);
+    }
+
+    function setInputWaitingState(id, waiting) {
+      const input = inputs[id];
+      const range = rangeInputs[id];
+      const control = input.closest(".user-number-control");
+
+      if (waiting) {
+        activatedInputs.delete(id);
+        input.value = "";
+        range.disabled = true;
+        control.classList.add("is-waiting");
+      } else {
+        activatedInputs.add(id);
+        range.disabled = false;
+        control.classList.remove("is-waiting");
+      }
+    }
+
+    function activateInput(id, source = "text") {
+      if (activatedInputs.has(id)) {
+        return;
+      }
+
+      const input = inputs[id];
+      const range = rangeInputs[id];
+      const initialValue = activationDefaults[id];
+
+      setInputWaitingState(id, false);
+
+      const rangeValue = clamp(
+        initialValue,
+        Number(range.min),
+        Number(range.max)
+      );
+
+      range.value = String(rangeValue);
+      input.value = String(
+        source === "range"
+          ? rangeValue
+          : initialValue
+      );
+
+      calculate();
+    }
+
+    function resetAllInputStates() {
+      ids.forEach((id) => {
+        setInputWaitingState(id, true);
+      });
+    }
+
+    function syncRangeFromText(id) {
+      const range = rangeInputs[id];
+
+      if (!range) {
+        return;
+      }
+
+      const value = readNumber(inputs[id]);
+
+      if (value === null) {
+        return;
+      }
+
+      if (!activatedInputs.has(id)) {
+        setInputWaitingState(id, false);
+      }
+
+      const rangeMin = Number(range.min);
+      const rangeMax = Number(range.max);
+
+      range.value = String(
+        clamp(value, rangeMin, rangeMax)
+      );
+    }
+
+    function syncTextFromRange(id) {
+      const range = rangeInputs[id];
+
+      if (!range) {
+        return;
+      }
+
+      inputs[id].value = range.value;
     }
 
     function readNumber(input) {
@@ -517,7 +669,7 @@
           percentagePoint.toFixed(3)
         );
 
-      return `${sign}${compactValue}%p`;
+      return `${sign}${compactValue}%`;
     }
 
     function getPhysicalMissProbability(
@@ -1293,6 +1445,21 @@
       const mobAcc = readNumber(inputs.mobAcc);
       const mobAvoid = readNumber(inputs.mobAvoid);
 
+      const allInputsReady =
+        ids.every((id) => activatedInputs.has(id)) &&
+        [
+          userLevel,
+          userAcc,
+          userAvoid,
+          mobLevel,
+          mobAcc,
+          mobAvoid
+        ].every((value) => value !== null);
+
+      if (!allInputsReady) {
+        return;
+      }
+
       let visibleCount = 0;
       let levelDiff = null;
 
@@ -1416,11 +1583,27 @@
     }
 
     ids.forEach((id) => {
+      inputs[id].addEventListener("pointerdown", () => {
+        if (!activatedInputs.has(id)) {
+          activateInput(id, "text");
+        }
+      });
+
+      inputs[id].addEventListener("focus", () => {
+        if (!activatedInputs.has(id)) {
+          activateInput(id, "text");
+        }
+      });
+
       inputs[id].addEventListener("input", (event) => {
         sanitizeAndClampInput(event.currentTarget);
+        syncRangeFromText(id);
 
         if (["mobLevel", "mobAcc", "mobAvoid"].includes(id)) {
-          markPresetAsCustom();
+          markPresetAsCustom({
+            preserveDetail: true,
+            clearSearch: true
+          });
         }
 
         calculate();
@@ -1428,15 +1611,49 @@
 
       inputs[id].addEventListener("blur", (event) => {
         sanitizeAndClampInput(event.currentTarget);
+        syncRangeFromText(id);
         calculate();
       });
     });
+
+    Object.entries(rangeInputs).forEach(
+      ([id, range]) => {
+        const control = range.closest(".user-number-control");
+
+        control.addEventListener("pointerdown", (event) => {
+          if (
+            activatedInputs.has(id) ||
+            event.target === inputs[id]
+          ) {
+            return;
+          }
+
+          activateInput(id, "range");
+        });
+
+        range.addEventListener("input", () => {
+          syncTextFromRange(id);
+
+          if (["mobLevel", "mobAcc", "mobAvoid"].includes(id)) {
+          markPresetAsCustom({
+            preserveDetail: true,
+            clearSearch: true
+          });
+        }
+
+          calculate();
+        });
+      }
+    );
 
     isThiefJob.addEventListener("change", calculate);
     updatePresetClearButton();
 
     monsterPresetSearch.addEventListener("input", () => {
-      markPresetAsCustom();
+      markPresetAsCustom({
+        preserveDetail: false,
+        clearSearch: false
+      });
       updatePresetClearButton();
       renderAutocomplete(monsterPresetSearch.value);
     });
@@ -1528,9 +1745,7 @@
     document
       .getElementById("resetButton")
       .addEventListener("click", () => {
-        ids.forEach((id) => {
-          inputs[id].value = "";
-        });
+        resetAllInputStates();
 
         monsterPresetSearch.value = "";
         updatePresetClearButton();
@@ -1542,7 +1757,6 @@
         closeAutocomplete();
 
         calculate();
-        inputs.userLevel.focus();
       });
 
     avoidChart.addEventListener(
@@ -1606,4 +1820,5 @@
       }, 120);
     });
 
+    resetAllInputStates();
     calculate();
