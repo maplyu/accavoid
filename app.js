@@ -2339,7 +2339,23 @@
           );
         }
 
-        window.location.reload();
+        const url = new URL(window.location.href);
+
+        url.searchParams.set(
+          "view",
+          mode
+        );
+
+        url.searchParams.set(
+          "_mode",
+          String(Date.now())
+        );
+
+        url.hash = "";
+
+        window.location.replace(
+          url.toString()
+        );
       }
 
       desktopViewButton?.addEventListener(
@@ -2351,6 +2367,25 @@
         "click",
         () => setViewMode("mobile")
       );
+
+      /*
+       * Keep the visible URL clean after the fresh navigation used to
+       * reset Safari's remembered zoom.
+       */
+      const currentUrl =
+        new URL(window.location.href);
+
+      if (currentUrl.searchParams.has("_mode")) {
+        currentUrl.searchParams.delete("_mode");
+
+        window.history.replaceState(
+          null,
+          "",
+          currentUrl.toString()
+        );
+      }
+
+      window.scrollTo(0, 0);
     })();
 
     /*
