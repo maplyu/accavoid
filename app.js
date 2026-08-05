@@ -43,6 +43,12 @@
     const mobileAutocompleteMedia =
       window.matchMedia("(max-width: 900px)");
 
+    const autocompleteTouchDevice =
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia("(pointer: coarse)").matches;
+
+    let preserveAutocompleteBlurUntil = 0;
+
     let mobileListTouchStartY = 0;
     let mobileListTouchMoved = false;
     let mobileListTouchButton = null;
@@ -1898,9 +1904,28 @@
     });
 
     monsterPresetSearch.addEventListener("blur", () => {
+      const autocompleteVisible =
+        !monsterAutocomplete.classList.contains("hidden");
+
+      const preservingTouchInteraction =
+        autocompleteTouchDevice &&
+        autocompleteVisible &&
+        Date.now() < preserveAutocompleteBlurUntil;
+
+      if (preservingTouchInteraction) {
+        if (mobileAutocompleteMedia.matches) {
+          window.setTimeout(
+            updateMobileMonsterListBounds,
+            180
+          );
+        }
+
+        return;
+      }
+
       if (
         mobileAutocompleteMedia.matches &&
-        !monsterAutocomplete.classList.contains("hidden")
+        autocompleteVisible
       ) {
         window.setTimeout(
           updateMobileMonsterListBounds,
@@ -1911,6 +1936,59 @@
 
       window.setTimeout(closeAutocomplete, 120);
     });
+
+    /*
+     * In forced PC view on a phone, scrolling the autocomplete list blurs
+     * the search input to close the keyboard. Preserve the open list during
+     * that touch gesture instead of treating the blur as a close request.
+     */
+    monsterAutocomplete.addEventListener(
+      "touchstart",
+      () => {
+        if (!autocompleteTouchDevice) {
+          return;
+        }
+
+        preserveAutocompleteBlurUntil =
+          Date.now() + 1400;
+      },
+      {
+        passive: true,
+        capture: true
+      }
+    );
+
+    monsterAutocomplete.addEventListener(
+      "touchmove",
+      () => {
+        if (!autocompleteTouchDevice) {
+          return;
+        }
+
+        preserveAutocompleteBlurUntil =
+          Date.now() + 700;
+      },
+      {
+        passive: true,
+        capture: true
+      }
+    );
+
+    monsterAutocomplete.addEventListener(
+      "touchend",
+      () => {
+        if (!autocompleteTouchDevice) {
+          return;
+        }
+
+        preserveAutocompleteBlurUntil =
+          Date.now() + 260;
+      },
+      {
+        passive: true,
+        capture: true
+      }
+    );
 
     monsterAutocomplete.addEventListener(
       "touchstart",
@@ -2036,6 +2114,35 @@
           updateMobileMonsterListBounds,
           180
         );
+      }
+    );
+
+    document.addEventListener(
+      "touchstart",
+      (event) => {
+        if (
+          !autocompleteTouchDevice ||
+          monsterAutocomplete.classList.contains("hidden")
+        ) {
+          return;
+        }
+
+        const target = event.target;
+
+        const touchedSearch =
+          monsterPresetSearch.contains(target);
+
+        const touchedList =
+          monsterAutocomplete.contains(target);
+
+        if (!touchedSearch && !touchedList) {
+          preserveAutocompleteBlurUntil = 0;
+          closeAutocomplete();
+        }
+      },
+      {
+        passive: true,
+        capture: true
       }
     );
 
