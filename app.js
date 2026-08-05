@@ -2317,6 +2317,17 @@
         document.getElementById("mobileViewButton");
 
       function setViewMode(mode) {
+        const currentMode =
+          document.documentElement.classList.contains(
+            "force-desktop-view"
+          )
+            ? "desktop"
+            : "mobile";
+
+        if (mode === currentMode) {
+          return;
+        }
+
         if (mode === "desktop") {
           localStorage.setItem(
             "accavoidViewMode",
@@ -2343,42 +2354,46 @@
     })();
 
     /*
-     * Mobile keyboard dismissal:
-     * whenever any scrollable area begins to move, dismiss the
-     * software keyboard. Range-slider interaction is excluded.
+     * Touch keyboard dismissal.
+     * Uses physical touch capability, so it works in both mobile and forced
+     * desktop layouts on a phone. Any recognizable vertical scroll gesture
+     * closes the active keyboard. Range sliders are excluded.
      */
     (() => {
-      const mobileMedia =
-        window.matchMedia("(max-width: 900px)");
+      const touchDevice =
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia("(pointer: coarse)").matches;
 
-      let touchStartY = 0;
-      let keyboardDismissedForGesture = false;
+      let startX = 0;
+      let startY = 0;
+      let dismissedForGesture = false;
 
-      function isEditableElement(element) {
-        return (
-          element instanceof HTMLInputElement ||
-          element instanceof HTMLTextAreaElement ||
-          element instanceof HTMLSelectElement
-        );
-      }
-
-      function isRangeElement(element) {
+      function isRangeInput(element) {
         return (
           element instanceof HTMLInputElement &&
           element.type === "range"
         );
       }
 
-      function dismissMobileKeyboard() {
-        if (!mobileMedia.matches) {
+      function canOwnKeyboard(element) {
+        return (
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement ||
+          element?.isContentEditable === true
+        );
+      }
+
+      function dismissKeyboard() {
+        if (!touchDevice) {
           return;
         }
 
         const active = document.activeElement;
 
         if (
-          isEditableElement(active) &&
-          !isRangeElement(active)
+          canOwnKeyboard(active) &&
+          !isRangeInput(active)
         ) {
           active.blur();
         }
@@ -2387,16 +2402,19 @@
       document.addEventListener(
         "touchstart",
         (event) => {
-          if (!mobileMedia.matches) {
+          if (!touchDevice) {
             return;
           }
 
           const touch = event.touches[0];
 
-          touchStartY =
-            touch ? touch.clientY : 0;
+          if (!touch) {
+            return;
+          }
 
-          keyboardDismissedForGesture = false;
+          startX = touch.clientX;
+          startY = touch.clientY;
+          dismissedForGesture = false;
         },
         { passive: true, capture: true }
       );
@@ -2405,9 +2423,9 @@
         "touchmove",
         (event) => {
           if (
-            !mobileMedia.matches ||
-            keyboardDismissedForGesture ||
-            isRangeElement(event.target)
+            !touchDevice ||
+            dismissedForGesture ||
+            isRangeInput(event.target)
           ) {
             return;
           }
@@ -2418,11 +2436,18 @@
             return;
           }
 
+          const deltaX =
+            Math.abs(touch.clientX - startX);
+
+          const deltaY =
+            Math.abs(touch.clientY - startY);
+
           if (
-            Math.abs(touch.clientY - touchStartY) >= 5
+            deltaY >= 3 &&
+            deltaY >= deltaX * 0.55
           ) {
-            keyboardDismissedForGesture = true;
-            dismissMobileKeyboard();
+            dismissedForGesture = true;
+            dismissKeyboard();
           }
         },
         { passive: true, capture: true }
@@ -2430,16 +2455,19 @@
 
       document.addEventListener(
         "scroll",
-        dismissMobileKeyboard,
-        {
-          passive: true,
-          capture: true
-        }
+        dismissKeyboard,
+        { passive: true, capture: true }
       );
 
       window.addEventListener(
         "scroll",
-        dismissMobileKeyboard,
+        dismissKeyboard,
+        { passive: true }
+      );
+
+      window.visualViewport?.addEventListener(
+        "scroll",
+        dismissKeyboard,
         { passive: true }
       );
     })();
