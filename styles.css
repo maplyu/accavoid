@@ -1367,3 +1367,157 @@
         pointer-events: none;
       }
     }
+
+
+    .monster-boss-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 3px 8px;
+      border: 1px solid rgba(255, 190, 92, 0.30);
+      border-radius: 999px;
+      background: rgba(255, 190, 92, 0.09);
+      color: #ffd08a;
+      font-size: 0.68rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .monster-boss-badge.hidden {
+      display: none;
+    }
+
+    .autocomplete-item {
+      gap: 10px;
+    }
+
+    .autocomplete-thumb-wrap {
+      display: grid;
+      place-items: center;
+      flex: 0 0 38px;
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(183, 190, 205, 0.12);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.025);
+      overflow: hidden;
+    }
+
+    .autocomplete-thumb {
+      display: block;
+      max-width: 32px;
+      max-height: 32px;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    .autocomplete-thumb.is-missing {
+      display: none;
+    }
+
+    .autocomplete-item-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .autocomplete-name-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .autocomplete-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .autocomplete-boss-badge {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      min-height: 19px;
+      padding: 3px 6px;
+      border: 1px solid rgba(255, 190, 92, 0.28);
+      border-radius: 999px;
+      background: rgba(255, 190, 92, 0.08);
+      color: #ffd08a;
+      font-size: 0.62rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 900px) {
+      .autocomplete-thumb-wrap {
+        flex-basis: 42px;
+        width: 42px;
+        height: 42px;
+      }
+
+      .autocomplete-thumb {
+        max-width: 36px;
+        max-height: 36px;
+      }
+    }
+
+
+    /*
+     * Monster search names
+     * Desktop: reveal the full name when hovered or keyboard-focused.
+     * Mobile: display the full name over multiple lines.
+     */
+    @media (min-width: 901px) {
+      .autocomplete-item {
+        transition:
+          background 0.14s ease,
+          min-height 0.14s ease;
+      }
+
+      .autocomplete-item:hover .autocomplete-name,
+      .autocomplete-item:focus-visible .autocomplete-name {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+      }
+
+      .autocomplete-item:hover .autocomplete-name-wrap,
+      .autocomplete-item:focus-visible .autocomplete-name-wrap {
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .autocomplete-item {
+        align-items: flex-start;
+      }
+
+      .autocomplete-item-main,
+      .autocomplete-name-wrap {
+        align-items: flex-start;
+      }
+
+      .autocomplete-name {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+        line-height: 1.35;
+      }
+
+      .autocomplete-level,
+      .autocomplete-boss-badge {
+        margin-top: 2px;
+      }
+    }

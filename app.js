@@ -56,6 +56,9 @@
     const monsterDetailLevel =
       document.getElementById("monsterDetailLevel");
 
+    const monsterBossBadge =
+      document.getElementById("monsterBossBadge");
+
     const monsterManualBadge =
       document.getElementById("monsterManualBadge");
 
@@ -337,15 +340,47 @@
         button.setAttribute("aria-selected", "true");
       }
 
+      const thumbnailWrap = document.createElement("span");
+      thumbnailWrap.className = "autocomplete-thumb-wrap";
+
+      const thumbnail = document.createElement("img");
+      thumbnail.className = "autocomplete-thumb";
+      thumbnail.src = `images/mob/${monster.id}.png`;
+      thumbnail.alt = "";
+      thumbnail.loading = "lazy";
+
+      thumbnail.addEventListener("error", () => {
+        thumbnail.classList.add("is-missing");
+      });
+
+      thumbnailWrap.appendChild(thumbnail);
+
+      const main = document.createElement("span");
+      main.className = "autocomplete-item-main";
+
+      const nameWrap = document.createElement("span");
+      nameWrap.className = "autocomplete-name-wrap";
+
       const name = document.createElement("span");
       name.className = "autocomplete-name";
       name.textContent = monster.name;
+      name.title = monster.name;
+
+      nameWrap.appendChild(name);
+
+      if (Number(monster.boss) === 1) {
+        const bossBadge = document.createElement("span");
+        bossBadge.className = "autocomplete-boss-badge";
+        bossBadge.textContent = "BOSS";
+        nameWrap.appendChild(bossBadge);
+      }
 
       const level = document.createElement("span");
       level.className = "autocomplete-level";
       level.textContent = `Lv.${monster.level}`;
 
-      button.append(name, level);
+      main.append(nameWrap, level);
+      button.append(thumbnailWrap, main);
 
       button.addEventListener("mousedown", (event) => {
         event.preventDefault();
@@ -419,6 +454,12 @@
       monsterDetailRegion.textContent = monster.region || "";
       monsterDetailName.textContent = monster.name;
       monsterDetailLevel.textContent = `Lv.${monster.level}`;
+
+      monsterBossBadge.classList.toggle(
+        "hidden",
+        Number(monster.boss) !== 1
+      );
+
       monsterManualBadge.classList.add("hidden");
       monsterManualOverlay.classList.add("hidden");
       monsterDetailCard.classList.remove("is-manual");
@@ -434,6 +475,7 @@
       monsterDetailCard.classList.add("hidden");
       monsterDetailImage.removeAttribute("src");
       monsterDetailImage.alt = "";
+      monsterBossBadge.classList.add("hidden");
       monsterManualBadge.classList.add("hidden");
       monsterManualOverlay.classList.add("hidden");
       monsterDetailCard.classList.remove("is-manual");
