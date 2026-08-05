@@ -2302,3 +2302,144 @@
         { passive: false }
       );
     })();
+
+
+    /*
+     * Mobile / desktop presentation switch.
+     * Desktop mode changes the viewport width before reload so all
+     * desktop media-query behavior and layout are preserved.
+     */
+    (() => {
+      const desktopViewButton =
+        document.getElementById("desktopViewButton");
+
+      const mobileViewButton =
+        document.getElementById("mobileViewButton");
+
+      function setViewMode(mode) {
+        if (mode === "desktop") {
+          localStorage.setItem(
+            "accavoidViewMode",
+            "desktop"
+          );
+        } else {
+          localStorage.removeItem(
+            "accavoidViewMode"
+          );
+        }
+
+        window.location.reload();
+      }
+
+      desktopViewButton?.addEventListener(
+        "click",
+        () => setViewMode("desktop")
+      );
+
+      mobileViewButton?.addEventListener(
+        "click",
+        () => setViewMode("mobile")
+      );
+    })();
+
+    /*
+     * Mobile keyboard dismissal:
+     * whenever any scrollable area begins to move, dismiss the
+     * software keyboard. Range-slider interaction is excluded.
+     */
+    (() => {
+      const mobileMedia =
+        window.matchMedia("(max-width: 900px)");
+
+      let touchStartY = 0;
+      let keyboardDismissedForGesture = false;
+
+      function isEditableElement(element) {
+        return (
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement
+        );
+      }
+
+      function isRangeElement(element) {
+        return (
+          element instanceof HTMLInputElement &&
+          element.type === "range"
+        );
+      }
+
+      function dismissMobileKeyboard() {
+        if (!mobileMedia.matches) {
+          return;
+        }
+
+        const active = document.activeElement;
+
+        if (
+          isEditableElement(active) &&
+          !isRangeElement(active)
+        ) {
+          active.blur();
+        }
+      }
+
+      document.addEventListener(
+        "touchstart",
+        (event) => {
+          if (!mobileMedia.matches) {
+            return;
+          }
+
+          const touch = event.touches[0];
+
+          touchStartY =
+            touch ? touch.clientY : 0;
+
+          keyboardDismissedForGesture = false;
+        },
+        { passive: true, capture: true }
+      );
+
+      document.addEventListener(
+        "touchmove",
+        (event) => {
+          if (
+            !mobileMedia.matches ||
+            keyboardDismissedForGesture ||
+            isRangeElement(event.target)
+          ) {
+            return;
+          }
+
+          const touch = event.touches[0];
+
+          if (!touch) {
+            return;
+          }
+
+          if (
+            Math.abs(touch.clientY - touchStartY) >= 5
+          ) {
+            keyboardDismissedForGesture = true;
+            dismissMobileKeyboard();
+          }
+        },
+        { passive: true, capture: true }
+      );
+
+      document.addEventListener(
+        "scroll",
+        dismissMobileKeyboard,
+        {
+          passive: true,
+          capture: true
+        }
+      );
+
+      window.addEventListener(
+        "scroll",
+        dismissMobileKeyboard,
+        { passive: true }
+      );
+    })();

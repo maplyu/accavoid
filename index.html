@@ -3,10 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta
+    id="viewportMeta"
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
+
+  <script>
+    (() => {
+      const mode =
+        localStorage.getItem("accavoidViewMode");
+
+      if (mode === "desktop") {
+        document
+          .getElementById("viewportMeta")
+          .setAttribute(
+            "content",
+            "width=1200, initial-scale=1.0, viewport-fit=cover"
+          );
+
+        document.documentElement.classList.add(
+          "force-desktop-view"
+        );
+      }
+    })();
+  </script>
   <title>accavoid lyuhwa</title>
+  <link
+    rel="icon"
+    type="image/png"
+    href="images/mark.png"
+  />
+  <link
+    rel="apple-touch-icon"
+    href="images/mark.png"
+  />
 
   <link rel="stylesheet" href="styles.css" />
 
@@ -170,7 +200,16 @@
 <body>
   <main class="page">
     <header class="hero">
+      <div class="brand-mark-wrap" aria-label="accavoid">
+        <img
+          class="brand-mark"
+          src="images/mark.png"
+          alt=""
+        />
+      </div>
+
       <h1></h1>
+
       <button id="resetButton" class="top-reset-button" type="button">
         입력 초기화
       </button>
@@ -523,6 +562,24 @@
 
   </main>
 
+
+  <div class="view-mode-controls" aria-label="화면 모드">
+    <button
+      id="desktopViewButton"
+      class="view-mode-button desktop-view-button"
+      type="button"
+    >
+      PC 버전
+    </button>
+
+    <button
+      id="mobileViewButton"
+      class="view-mode-button mobile-view-button"
+      type="button"
+    >
+      모바일 버전
+    </button>
+  </div>
 
   <script src="mob-preset.js"></script>
   <script src="app.js"></script>

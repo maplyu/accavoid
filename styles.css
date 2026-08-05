@@ -1612,3 +1612,101 @@
         margin-bottom: 10px;
       }
     }
+
+
+    .brand-mark-wrap {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(183, 190, 205, 0.12);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.025);
+      box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.20),
+        inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    }
+
+    .brand-mark {
+      display: block;
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+      image-rendering: auto;
+    }
+
+    .hero h1 {
+      flex: 1 1 auto;
+    }
+
+    .view-mode-controls {
+      display: none;
+    }
+
+    .view-mode-button {
+      min-height: 42px;
+      padding: 9px 15px;
+      border: 1px solid rgba(183, 190, 205, 0.18);
+      border-radius: 999px;
+      background: rgba(24, 27, 34, 0.92);
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 600;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.34);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .view-mode-controls {
+        position: fixed;
+        z-index: 6000;
+        right: 12px;
+        bottom: max(12px, env(safe-area-inset-bottom));
+        display: flex;
+      }
+
+      .mobile-view-button {
+        display: none;
+      }
+
+      .desktop-view-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .brand-mark-wrap {
+        width: 32px;
+        height: 32px;
+      }
+
+      .brand-mark {
+        width: 21px;
+        height: 21px;
+      }
+    }
+
+    /*
+     * Desktop mode selected on a mobile device.
+     * The viewport is widened to 1200 CSS px before layout.
+     */
+    html.force-desktop-view .view-mode-controls {
+      position: fixed;
+      z-index: 6000;
+      right: 18px;
+      bottom: 18px;
+      display: flex;
+    }
+
+    html.force-desktop-view .desktop-view-button {
+      display: none;
+    }
+
+    html.force-desktop-view .mobile-view-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
