@@ -463,9 +463,33 @@
       main.append(nameWrap, level);
       button.append(thumbnailWrap, main);
 
+      /*
+       * Desktop:
+       * Keep the search field from blurring before the click completes.
+       *
+       * Mobile:
+       * Selection is handled by click. A drag used for list scrolling
+       * does not generate a click, so scrolling remains natural.
+       */
       button.addEventListener("mousedown", (event) => {
+        if (event.button === 0) {
+          event.preventDefault();
+        }
+      });
+
+      button.addEventListener("click", (event) => {
         event.preventDefault();
+        event.stopPropagation();
+
         selectMonsterPreset(monster);
+
+        /*
+         * Explicit cleanup for mobile Safari.
+         * This guarantees that the dimmed backdrop never remains
+         * after a monster has been selected.
+         */
+        closeAutocomplete();
+        closeMobileAutocompleteSheet();
       });
 
       return button;
@@ -600,6 +624,8 @@
 
       window.requestAnimationFrame(() => {
         monsterPresetSearch.blur();
+        closeAutocomplete();
+        closeMobileAutocompleteSheet();
       });
     }
 
