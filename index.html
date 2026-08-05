@@ -83,6 +83,84 @@
       line-height: 1.2;
       color: var(--text);
     }
+
+    .user-number-control {
+      display: grid;
+      grid-template-columns: minmax(86px, 116px) minmax(0, 1fr);
+      align-items: center;
+      gap: 14px;
+    }
+
+    .user-number-input {
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .field input.user-range {
+      width: 100%;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      outline: none;
+      background: transparent;
+      box-shadow: none;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .field input.user-range:focus {
+      border: 0;
+      box-shadow: none;
+    }
+
+    .user-range::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(122, 184, 255, 0.24);
+    }
+
+    .user-range::-webkit-slider-thumb {
+      width: 18px;
+      height: 18px;
+      margin-top: -6px;
+      border: 2px solid var(--panel);
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .user-range::-moz-range-track {
+      height: 6px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(122, 184, 255, 0.24);
+    }
+
+    .user-range::-moz-range-progress {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .user-range::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--panel);
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+
+    @media (max-width: 520px) {
+      .user-number-control {
+        grid-template-columns: 82px minmax(0, 1fr);
+        gap: 10px;
+      }
+    }
+
   </style>
 </head>
 
@@ -97,43 +175,79 @@
         <h2>나의 정보</h2>
 
         <div class="fields">
-          <div class="field">
+          <div class="field user-slider-field">
             <label for="userLevel">나의 레벨</label>
-            <input
-              id="userLevel"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="ex) 180"
-              data-min="1"
-              data-max="200"
-            />
+            <div class="user-number-control">
+              <input
+                id="userLevel"
+                class="user-number-input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                value="180"
+                data-min="1"
+                data-max="200"
+              />
+              <input
+                id="userLevelRange"
+                class="user-range"
+                type="range"
+                min="1"
+                max="200"
+                value="180"
+                aria-label="나의 레벨 슬라이더"
+              />
+            </div>
           </div>
 
-          <div class="field">
+          <div class="field user-slider-field">
             <label for="userAcc">나의 명중률</label>
-            <input
-              id="userAcc"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="ex) 180"
-              data-min="1"
-              data-max="1000"
-            />
+            <div class="user-number-control">
+              <input
+                id="userAcc"
+                class="user-number-input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                value="180"
+                data-min="1"
+                data-max="1000"
+              />
+              <input
+                id="userAccRange"
+                class="user-range"
+                type="range"
+                min="1"
+                max="1000"
+                value="180"
+                aria-label="나의 명중률 슬라이더"
+              />
+            </div>
           </div>
 
-          <div class="field">
+          <div class="field user-slider-field">
             <label for="userAvoid">나의 회피율</label>
-            <input
-              id="userAvoid"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="ex) 100"
-              data-min="1"
-              data-max="1000"
-            />
+            <div class="user-number-control">
+              <input
+                id="userAvoid"
+                class="user-number-input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                value="100"
+                data-min="1"
+                data-max="1000"
+              />
+              <input
+                id="userAvoidRange"
+                class="user-range"
+                type="range"
+                min="1"
+                max="1000"
+                value="100"
+                aria-label="나의 회피율 슬라이더"
+              />
+            </div>
           </div>
 
           <div class="field checkbox-field">
@@ -345,5 +459,97 @@
 
   <script src="mob-preset.js"></script>
   <script src="app.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const controls = {
+        userLevel: {
+          rangeId: "userLevelRange",
+          defaultValue: 180
+        },
+        userAcc: {
+          rangeId: "userAccRange",
+          defaultValue: 180
+        },
+        userAvoid: {
+          rangeId: "userAvoidRange",
+          defaultValue: 100
+        }
+      };
+
+      function syncRangeFromText(input, range) {
+        const value = Number(input.value);
+
+        if (Number.isFinite(value) && input.value !== "") {
+          range.value = String(value);
+        }
+      }
+
+      Object.entries(controls).forEach(
+        ([inputId, config]) => {
+          const input =
+            document.getElementById(inputId);
+
+          const range =
+            document.getElementById(config.rangeId);
+
+          if (!input || !range) {
+            return;
+          }
+
+          range.addEventListener("input", () => {
+            input.value = range.value;
+
+            input.dispatchEvent(
+              new Event("input", {
+                bubbles: true
+              })
+            );
+          });
+
+          input.addEventListener("input", () => {
+            syncRangeFromText(input, range);
+          });
+
+          input.addEventListener("blur", () => {
+            syncRangeFromText(input, range);
+          });
+        }
+      );
+
+      const resetButton =
+        document.getElementById("resetButton");
+
+      if (resetButton) {
+        resetButton.addEventListener("click", () => {
+          Object.entries(controls).forEach(
+            ([inputId, config]) => {
+              const input =
+                document.getElementById(inputId);
+
+              const range =
+                document.getElementById(config.rangeId);
+
+              input.value =
+                String(config.defaultValue);
+
+              range.value =
+                String(config.defaultValue);
+            }
+          );
+
+          document
+            .getElementById("userLevel")
+            .dispatchEvent(
+              new Event("input", {
+                bubbles: true
+              })
+            );
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
