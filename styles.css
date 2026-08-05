@@ -967,3 +967,287 @@
     .monster-manual-badge {
       display: none !important;
     }
+
+
+    .mobile-input-panel-header,
+    .mobile-bottom-nav {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 74px;
+      }
+
+      body {
+        padding-bottom: calc(76px + env(safe-area-inset-bottom));
+      }
+
+      .page {
+        width: min(100% - 20px, 720px);
+        padding-top: 8px;
+        padding-bottom: 28px;
+      }
+
+      .hero {
+        position: sticky;
+        z-index: 40;
+        top: 0;
+        min-height: 56px;
+        margin: 0 -10px 12px;
+        padding: 8px 10px;
+        border-bottom: 1px solid rgba(183, 190, 205, 0.12);
+        background: rgba(17, 19, 24, 0.88);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+
+      .top-reset-button {
+        min-height: 40px;
+        padding: 8px 13px;
+      }
+
+      .desktop-workspace {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .user-sidebar {
+        position: static;
+        border-radius: 15px;
+        overflow: visible;
+      }
+
+      .mobile-input-panel-header {
+        position: sticky;
+        z-index: 12;
+        top: 58px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 48px;
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--line);
+        border-radius: 15px 15px 0 0;
+        background: rgba(30, 34, 43, 0.94);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .mobile-input-panel-header strong {
+        font-size: 0.93rem;
+        font-weight: 600;
+      }
+
+      .mobile-input-toggle {
+        min-width: 64px;
+        min-height: 34px;
+        padding: 6px 11px;
+        border: 1px solid rgba(183, 190, 205, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--muted);
+      }
+
+      .user-sidebar.mobile-collapsed .mobile-input-panel-body {
+        display: none;
+      }
+
+      .user-sidebar > .card {
+        padding: 18px 14px;
+      }
+
+      .sticky-panel-divider {
+        margin: 0 14px;
+      }
+
+      .fields {
+        gap: 15px;
+      }
+
+      .field label {
+        margin-bottom: 7px;
+        font-size: 0.86rem;
+      }
+
+      .user-number-control {
+        grid-template-columns: 84px minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .user-number-input,
+      .preset-search {
+        min-height: 46px;
+        font-size: 16px;
+      }
+
+      .field input.user-range {
+        height: 34px;
+      }
+
+      .user-range::-webkit-slider-runnable-track {
+        height: 8px;
+      }
+
+      .user-range::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+        margin-top: -8px;
+      }
+
+      .user-range::-moz-range-track,
+      .user-range::-moz-range-progress {
+        height: 8px;
+      }
+
+      .user-range::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+      }
+
+      .thief-toggle {
+        min-height: 46px;
+      }
+
+      .thief-toggle-switch {
+        width: 52px;
+        height: 30px;
+      }
+
+      .thief-toggle-switch::after {
+        width: 22px;
+        height: 22px;
+      }
+
+      .thief-toggle-input:checked + .thief-toggle-switch::after {
+        transform: translateX(22px);
+      }
+
+      .preset-clear {
+        width: 42px;
+        height: 42px;
+        font-size: 1.2rem;
+      }
+
+      .autocomplete-list {
+        z-index: 80;
+        max-height: min(54vh, 420px);
+        border-radius: 14px;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .autocomplete-item {
+        min-height: 50px;
+        padding: 12px 14px;
+      }
+
+      .main-content-column {
+        gap: 12px;
+      }
+
+      .card {
+        border-radius: 15px;
+      }
+
+      .monster-detail-layout {
+        grid-template-columns: 92px minmax(0, 1fr);
+        gap: 14px;
+      }
+
+      .monster-detail-image-wrap {
+        min-height: 92px;
+      }
+
+      .monster-detail-image {
+        max-width: 84px;
+        max-height: 84px;
+      }
+
+      .result-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .result-item {
+        min-height: auto;
+        padding: 15px;
+      }
+
+      .chart-card {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .chart-wrap {
+        height: 360px;
+        min-height: 360px;
+        touch-action: pan-y;
+      }
+
+      .chart-tooltip {
+        min-width: 150px;
+        max-width: calc(100vw - 40px);
+        font-size: 0.75rem;
+      }
+
+      .mobile-bottom-nav {
+        position: fixed;
+        z-index: 90;
+        left: 50%;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        width: min(calc(100% - 24px), 430px);
+        min-height: 54px;
+        padding: 5px;
+        border: 1px solid rgba(183, 190, 205, 0.16);
+        border-radius: 17px;
+        background: rgba(24, 27, 34, 0.92);
+        box-shadow: 0 15px 42px rgba(0, 0, 0, 0.42);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        transform: translateX(-50%);
+      }
+
+      .mobile-nav-button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.84rem;
+        font-weight: 600;
+      }
+
+      .mobile-nav-button.active {
+        background: rgba(122, 184, 255, 0.13);
+        color: var(--accent);
+      }
+    }
+
+    @media (max-width: 420px) {
+      .page {
+        width: min(100% - 14px, 720px);
+      }
+
+      .user-number-control {
+        grid-template-columns: 78px minmax(0, 1fr);
+        gap: 9px;
+      }
+
+      .monster-detail-layout {
+        grid-template-columns: 76px minmax(0, 1fr);
+      }
+
+      .monster-detail-image-wrap {
+        min-height: 76px;
+      }
+
+      .monster-detail-image {
+        max-width: 70px;
+        max-height: 70px;
+      }
+    }

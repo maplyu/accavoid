@@ -1822,3 +1822,115 @@
 
     resetAllInputStates();
     calculate();
+
+
+    (() => {
+      const mobileInputToggle =
+        document.getElementById("mobileInputToggle");
+
+      const inputPanel =
+        document.getElementById("inputPanel");
+
+      const mobileNavButtons =
+        Array.from(
+          document.querySelectorAll(".mobile-nav-button")
+        );
+
+      const mobileMedia =
+        window.matchMedia("(max-width: 900px)");
+
+      function updateInputToggleText() {
+        if (!mobileInputToggle || !inputPanel) {
+          return;
+        }
+
+        const collapsed =
+          inputPanel.classList.contains("mobile-collapsed");
+
+        mobileInputToggle.textContent =
+          collapsed ? "펼치기" : "접기";
+
+        mobileInputToggle.setAttribute(
+          "aria-expanded",
+          String(!collapsed)
+        );
+      }
+
+      if (mobileInputToggle && inputPanel) {
+        mobileInputToggle.addEventListener("click", () => {
+          inputPanel.classList.toggle("mobile-collapsed");
+          updateInputToggleText();
+        });
+
+        updateInputToggleText();
+      }
+
+      function getMobileTarget(targetId) {
+        if (targetId === "resultGrid") {
+          const resultGrid =
+            document.getElementById("resultGrid");
+
+          if (
+            resultGrid &&
+            !resultGrid.classList.contains("hidden")
+          ) {
+            return resultGrid;
+          }
+
+          return document.getElementById("emptyMessage");
+        }
+
+        if (targetId === "avoidChartCard") {
+          const chart =
+            document.getElementById("avoidChartCard");
+
+          if (
+            chart &&
+            !chart.classList.contains("hidden")
+          ) {
+            return chart;
+          }
+
+          return document.getElementById("resultGrid") ||
+            document.getElementById("emptyMessage");
+        }
+
+        return document.getElementById(targetId);
+      }
+
+      mobileNavButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          if (!mobileMedia.matches) {
+            return;
+          }
+
+          const targetId =
+            button.dataset.mobileTarget;
+
+          if (
+            targetId === "inputPanel" &&
+            inputPanel
+          ) {
+            inputPanel.classList.remove("mobile-collapsed");
+            updateInputToggleText();
+          }
+
+          const target =
+            getMobileTarget(targetId);
+
+          if (target) {
+            target.scrollIntoView({
+              behavior: "smooth",
+              block: "start"
+            });
+          }
+
+          mobileNavButtons.forEach((item) => {
+            item.classList.toggle(
+              "active",
+              item === button
+            );
+          });
+        });
+      });
+    })();
