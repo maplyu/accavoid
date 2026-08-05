@@ -1521,3 +1521,52 @@
         margin-top: 2px;
       }
     }
+
+
+    /*
+     * Mobile autocomplete layering fix
+     * Keep the monster list above the remaining monster input fields.
+     */
+    .monster-input-card,
+    .monster-input-card .fields,
+    .preset-field,
+    .preset-search-wrap {
+      overflow: visible;
+    }
+
+    .preset-field {
+      z-index: 1;
+    }
+
+    .preset-field:focus-within {
+      z-index: 300;
+    }
+
+    .autocomplete-list {
+      z-index: 999;
+    }
+
+    @media (max-width: 900px) {
+      .preset-field:focus-within {
+        position: relative;
+        z-index: 1000;
+      }
+
+      .autocomplete-list {
+        z-index: 1001;
+        max-height: min(
+          56dvh,
+          calc(100dvh - 170px)
+        );
+        padding-bottom: max(
+          10px,
+          env(safe-area-inset-bottom)
+        );
+        scroll-padding-bottom: 18px;
+        overscroll-behavior: contain;
+      }
+
+      .autocomplete-item:last-child {
+        margin-bottom: 6px;
+      }
+    }
